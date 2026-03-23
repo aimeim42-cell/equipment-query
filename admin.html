@@ -43,7 +43,7 @@
 <div id="login-page" class="login-page">
     <div class="login-box">
         <h4 style="text-align:center;margin-bottom:20px;color:#1976d2">网点运维管理</h4>
-        <form id="login-form">
+        <form id="login-form" onsubmit="return handleLogin(event)">
             <div class="mb-3"><label class="form-label">用户名</label><input type="text" class="form-control" id="login-username" required></div>
             <div class="mb-3"><label class="form-label">密码</label><input type="password" class="form-control" id="login-password" required></div>
             <button type="submit" class="btn btn-primary w-100">登录</button>
@@ -315,7 +315,24 @@ document.getElementById('login-form').addEventListener('submit', function(e) {
 });
 
 function logout() { 
-    checkLogin(); 
+    function handleLogin(e){
+    e.preventDefault();
+    const u=document.getElementById('login-username').value;
+    const p=document.getElementById('login-password').value;
+    const s=JSON.parse(localStorage.getItem('settings')||'{}');
+    if(!s.username){
+        localStorage.setItem('settings',JSON.stringify({username:u,password:p}));
+        alert('设置成功！');
+        document.getElementById('login-page').style.display='none';
+        document.getElementById('main-system').style.display='block';
+    }else if(u===s.username && p===s.password){
+        document.getElementById('login-page').style.display='none';
+        document.getElementById('main-system').style.display='block';
+    }else{
+        alert('错误');
+    }
+}
+checkLogin(); 
     document.getElementById('login-username').value='';
     document.getElementById('login-password').value=''; 
 }
@@ -522,6 +539,23 @@ function showPage(p){
     if(p==='vendors')renderVendors();
 }
 
+function handleLogin(e){
+    e.preventDefault();
+    const u=document.getElementById('login-username').value;
+    const p=document.getElementById('login-password').value;
+    const s=JSON.parse(localStorage.getItem('settings')||'{}');
+    if(!s.username){
+        localStorage.setItem('settings',JSON.stringify({username:u,password:p}));
+        alert('设置成功！');
+        document.getElementById('login-page').style.display='none';
+        document.getElementById('main-system').style.display='block';
+    }else if(u===s.username && p===s.password){
+        document.getElementById('login-page').style.display='none';
+        document.getElementById('main-system').style.display='block';
+    }else{
+        alert('错误');
+    }
+}
 checkLogin();
 </script>
 </body>
