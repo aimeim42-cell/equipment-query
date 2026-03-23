@@ -401,7 +401,12 @@ function changePage(delta){
 function filterStatus(s){currentFilter=s;currentPage=1;renderWorkorders();}
 function changeStatus(id,s){const o=workorders.find(x=>x.id===id);if(o){o.status=s;if(s==='已完成')o.completeTime=new Date().toISOString();else o.completeTime=null;saveWorkorders();}}
 
-function showPendingDetail(t){const now=new Date();const ms=new Date(now.getFullYear(),now.getMonth(),1);const wa=new Date(now.getTime()-7*86400000);let os=t==='month'?workorders.filter(o=>new Date(o.createTime)>=ms&&o.status!=='已完成'):workorders.filter(o=>new Date(o.createTime)>=wa&&o.status!=='已完成');document.getElementById('pendingModalTitle').textContent=(t==='month'?'本月':'本周')+'未完成 ('+os.length+'条)';document.querySelector('#pending-table tbody').innerHTML=os.map(o=>'<tr><td>'+o.id+'</td><td>'+o.dept+'</td><td>'+o.device+'</td><td>'+o.status+'</td></tr>').join('');new bootstrap.Modal(document.getElementById('pendingModal')).show();}
+function showPendingDetail(t){const now=new Date();const ms=new Date(now.getFullYear(),now.getMonth(),1);const wa=new Date(now.getTime()-7*86400000);let os=t==='month'?workorders.filter(o=>new Date(o.createTime)>=ms&&o.status!=='已完成'):workorders.filter(o=>new Date(o.createTime)>=wa&&o.status!=='已完成');document.getElementById('pendingModalTitle').textContent=(t==='month'?'本月':'本周')+'未完成 ('+os.length+'条)';const now = new Date();
+    document.querySelector('#pending-table tbody').innerHTML = os.map(o => {
+        const ct = new Date(o.createTime);
+        const duration = now - ct;
+        return '<tr><td>'+o.id+'</td><td>'+o.dept+'</td><td>'+o.device+'</td><td>'+ct.toLocaleString()+'</td><td>'+formatDuration(duration)+'</td><td>'+getStatusHtml(o.status)+'</td></tr>';
+    }).join('');new bootstrap.Modal(document.getElementById('pendingModal')).show();}
 
 function renderDashboard(){
     const now=new Date();const ms=new Date(now.getFullYear(),now.getMonth(),1);const wa=new Date(now.getTime()-7*86400000);
