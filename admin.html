@@ -175,7 +175,6 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script>
-// 使用你的GitHub Token（已分割加密）
 const T1 = 'ghp_LFiwst';
 const T2 = 'gWK9s6iNFS';
 const T3 = 'AGXgfUF0ypN2ky0EQrzR';
@@ -208,104 +207,63 @@ function showSyncStatus(msg, type) {
     setTimeout(() => el.className = 'sync-indicator sync-ok', 3000);
 }
 
-async function getGistId() {
-    return localStorage.getItem('gist_id') || '';
-}
+function getGistId() { return localStorage.getItem('gist_id') || ''; }
 
-async function saveGistId() {
+function saveGistId() {
     const id = document.getElementById('gist-id').value.trim();
-    if(id) {
-        localStorage.setItem('gist_id', id);
-        alert('Gist ID保存成功！');
-    }
+    if(id) { localStorage.setItem('gist_id', id); alert('保存成功！'); }
 }
 
 async function syncFromCloud() {
-    const gistId = await getGistId();
+    const gistId = getGistId();
     if(!gistId) { alert('请先在设置中配置Gist ID'); showPage('settings'); return; }
-    
     showSyncStatus('🔄 同步中...', 'syncing');
     try {
-        const r = await fetch('https://api.github.com/gists/' + gistId, {
-            headers: { 'Authorization': 'token ' + GITHUB_TOKEN }
-        });
+        const r = await fetch('https://api.github.com/gists/' + gistId, { headers: { 'Authorization': 'token ' + GITHUB_TOKEN } });
         if(r.ok) {
             const data = await r.json();
             const files = Object.keys(data.files);
             if(files.length > 0) {
-                const content = data.files[files[0]].content;
-                const json = JSON.parse(content);
-                if(json.workorders) {
-                    workorders = json.workorders;
-                    localStorage.setItem('workorders', JSON.stringify(workorders));
-                    renderWorkorders();
-                    renderDashboard();
-                    showSyncStatus('✅ 同步成功 ' + workorders.length + '条', 'ok');
-                    alert('同步成功！共' + workorders.length + '条工单');
+                let content = data.files[files[0]].content;
+                try {
+                    const json = JSON.parse(content);
+                    if(json.workorders && Array.isArray(json.workorders)) {
+                        workorders = json.workorders;
+                        localStorage.setItem('workorders', JSON.stringify(workorders));
+                        renderWorkorders(); renderDashboard();
+                        showSyncStatus('✅ 同步成功 ' + workorders.length + '条', 'ok');
+                        alert('同步成功！共' + workorders.length + '条工单');
+                    } else {
+                        alert('Gist内容格式不对，请先保存一次数据');
+                        showSyncStatus('❌ 格式错误', 'err');
+                    }
+                } catch(e) {
+                    alert('Gist是空的或格式不对，请先点击"保存到云端"');
+                    showSyncStatus('❌ 格式错误', 'err');
                 }
             }
-        } else {
-            showSyncStatus('❌ 同步失败', 'err');
-            alert('同步失败，请检查Gist ID是否正确');
-        }
-    } catch(e) {
-        showSyncStatus('❌ 同步失败', 'err');
-        alert('同步失败: ' + e.message);
-    }
+        } else { showSyncStatus('❌ 同步失败', 'err'); alert('请检查Gist ID是否正确'); }
+    } catch(e) { showSyncStatus('❌ 同步失败', 'err'); alert('同步失败: ' + e.message); }
 }
 
 async function uploadToCloud() {
-    const gistId = await getGistId();
+    const gistId = getGistId();
     if(!gistId) { alert('请先在设置中配置Gist ID'); showPage('settings'); return; }
-    
     showSyncStatus('💾 保存中...', 'syncing');
     try {
-        // 获取当前gist信息
-        let existingContent = '';
-        let sha = '';
+        let sha = ''; let fileName = 'workorders.json';
         try {
-            const r = await fetch('https://api.github.com/gists/' + gistId, {
-                headers: { 'Authorization': 'token ' + GITHUB_TOKEN }
-            });
-            if(r.ok) {
-                const data = await r.json();
-                sha = data.history[0].version;
-                const files = Object.keys(data.files);
-                if(files.length > 0) existingContent = data.files[files[0]].content;
-            }
+            const r = await fetch('https://api.github.com/gists/' + gistId, { headers: { 'Authorization': 'token ' + GITHUB_TOKEN } });
+            if(r.ok) { const d = await r.json(); sha = d.history[0].version; const fs = Object.keys(d.files); if(fs.length>0) fileName = fs[0]; }
         } catch(e) {}
-        
         const newContent = JSON.stringify({workorders: workorders, updateTime: new Date().toISOString()}, null, 2);
-        const fileName = existingContent ? 'workorders.json' : '工单数据.json';
-        
-        const body = {
-            description: '工单数据备份',
-            public: false,
-            files: {}
-        };
+        const body = { description: '工单数据', public: false, files: {} };
         body.files[fileName] = { content: newContent };
         if(sha) body.files[fileName].sha = sha;
-        
-        const r = await fetch('https://api.github.com/gists/' + gistId, {
-            method: 'PATCH',
-            headers: { 
-                'Authorization': 'token ' + GITHUB_TOKEN,
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(body)
-        });
-        
-        if(r.ok) {
-            showSyncStatus('✅ 已保存', 'ok');
-            alert('保存成功！');
-        } else {
-            showSyncStatus('❌ 保存失败', 'err');
-            alert('保存失败');
-        }
-    } catch(e) {
-        showSyncStatus('❌ 保存失败', 'err');
-        alert('保存失败: ' + e.message);
-    }
+        const r = await fetch('https://api.github.com/gists/' + gistId, { method: 'PATCH', headers: { 'Authorization': 'token ' + GITHUB_TOKEN, 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+        if(r.ok) { showSyncStatus('✅ 已保存', 'ok'); alert('保存成功！'); }
+        else { showSyncStatus('❌ 保存失败', 'err'); alert('保存失败'); }
+    } catch(e) { showSyncStatus('❌ 保存失败', 'err'); alert('保存失败: ' + e.message); }
 }
 
 function checkLogin() {
@@ -321,17 +279,8 @@ document.getElementById('login-form').addEventListener('submit', function(e) {
     const u = document.getElementById('login-username').value;
     const p = document.getElementById('login-password').value;
     const s = JSON.parse(localStorage.getItem('settings') || '{}');
-    if(!s.username) { 
-        localStorage.setItem('settings',JSON.stringify({username:u,password:p}));
-        alert('设置成功！'); 
-        document.getElementById('login-page').style.display='none';
-        document.getElementById('main-system').style.display='block'; 
-    }
-    else if(u===s.username && p===s.password) { 
-        document.getElementById('login-page').style.display='none';
-        document.getElementById('main-system').style.display='block';
-        syncFromCloud();
-    }
+    if(!s.username) { localStorage.setItem('settings',JSON.stringify({username:u,password:p})); alert('设置成功！'); document.getElementById('login-page').style.display='none';document.getElementById('main-system').style.display='block'; }
+    else if(u===s.username && p===s.password) { document.getElementById('login-page').style.display='none';document.getElementById('main-system').style.display='block'; }
     else { alert('错误'); }
 });
 
@@ -341,7 +290,6 @@ function clearData(){if(confirm('清除?')){workorders=[];saveWorkorders();}}
 function saveWorkorders(){localStorage.setItem('workorders',JSON.stringify(workorders));renderWorkorders();renderDashboard();}
 function getVendorList(d){return vendors.filter(x=>d.includes(x.type.split('/')[0])||x.type===d||x.type==='其他'||x.type==='零星维修');}
 function generateOrderNo(){const n=new Date();return'WO'+n.getFullYear()+String(n.getMonth()+1).padStart(2,'0')+String(n.getDate()).padStart(2,'0')+String(workorders.length+1).padStart(4,'0');}
-
 function onDeviceChange(){const d=document.getElementById('edit-device').value;const s=document.getElementById('edit-vendor');s.innerHTML=getVendorList(d).map(v=>'<option value="'+v.vendor+'">'+v.vendor+' ('+v.type+')</option>').join('');}
 
 function analyzeWorkorder(){
@@ -398,9 +346,7 @@ function renderWorkorders(){
     const end = start + PAGE_SIZE;
     const pageData = filtered.slice(start, end);
     const now=new Date();const ow=new Date(now.getTime()-7*86400000);
-    
     document.querySelector('#workorder-table tbody').innerHTML=pageData.map(o=>'<tr class="'+(o.status!=='已完成'&&new Date(o.createTime)<ow?'overdue':'')+'"><td>'+o.id+'</td><td>'+o.dept+'</td><td>'+o.device+'</td><td><select class="form-select form-select-sm" style="width:auto" onchange="changeStatus(\''+o.id+'\',this.value)"><option '+(o.status==='响应中'?'selected':'')+'>响应中</option><option '+(o.status==='审批中'?'selected':'')+'>审批中</option><option '+(o.status==='已完成'?'selected':'')+'>已完成</option></select></td><td>'+(o.vendor||'-')+'</td><td>'+new Date(o.createTime).toLocaleDateString()+'</td></tr>').join('');
-    
     document.getElementById('page-info').textContent = '共' + filtered.length + '条，第' + currentPage + '/' + totalPages + '页';
     document.getElementById('btn-prev').disabled = currentPage <= 1;
     document.getElementById('btn-next').disabled = currentPage >= totalPages;
