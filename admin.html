@@ -152,10 +152,9 @@
                 <div class="card mb-3">
                     <div class="card-header">云端同步设置</div>
                     <div class="card-body">
-                        <p class="small">首次使用需要配置Gist ID（免费GitHub账号即可）</p>
+                        <p class="small">输入你的GitHub Gist ID</p>
                         <div class="mb-2"><input class="form-control form-control-sm" id="gist-id" placeholder="输入Gist ID"></div>
                         <button class="btn btn-primary btn-sm" onclick="saveGistId()">保存设置</button>
-                        <p class="small mt-2 text-muted">如何获取：创建GitHub Gist后会得到一个ID</p>
                     </div>
                 </div>
                 <div class="card">
@@ -199,6 +198,8 @@ let currentFilter = 'all';
 let analyzedData = null;
 let currentPage = 1;
 const PAGE_SIZE = 30;
+let cachedGistSha = '';
+let cachedGistFile = '';
 
 function showSyncStatus(msg, type) {
     const el = document.getElementById('sync-indicator');
@@ -211,7 +212,7 @@ function getGistId() { return localStorage.getItem('gist_id') || ''; }
 
 function saveGistId() {
     const id = document.getElementById('gist-id').value.trim();
-    if(id) { localStorage.setItem('gist_id', id); alert('保存成功！'); }
+    if(id) { localStorage.setItem('gist_id', id); cachedGistSha = ''; cachedGistFile = ''; alert('保存成功！'); }
 }
 
 async function syncFromCloud() {
@@ -225,6 +226,8 @@ async function syncFromCloud() {
             const files = Object.keys(data.files);
             if(files.length > 0) {
                 let content = data.files[files[0]].content;
+                cachedGistFile = files[0];
+                cachedGistSha = data.history[0].version;
                 try {
                     const json = JSON.parse(content);
                     if(json.workorders && Array.isArray(json.workorders)) {
@@ -251,18 +254,52 @@ async function uploadToCloud() {
     if(!gistId) { alert('请先在设置中配置Gist ID'); showPage('settings'); return; }
     showSyncStatus('💾 保存中...', 'syncing');
     try {
-        let sha = ''; let fileName = 'workorders.json';
+        // 先获取Gist信息
+        let sha = cachedGistSha;
+        let fileName = cachedGistFile || 'workorders.json';
         try {
             const r = await fetch('https://api.github.com/gists/' + gistId, { headers: { 'Authorization': 'token ' + GITHUB_TOKEN } });
-            if(r.ok) { const d = await r.json(); sha = d.history[0].version; const fs = Object.keys(d.files); if(fs.length>0) fileName = fs[0]; }
-        } catch(e) {}
+            if(r.ok) { 
+                const d = await r.json(); 
+                sha = d.history[0].version; 
+                const fs = Object.keys(d.files); 
+                if(fs.length > 0) {
+                    fileName = fs[0];
+                    // 检查内容是否是JSON
+                    let content = d.files[fs[0]].content;
+                    try { JSON.parse(content); } catch { fileName = 'workorders.json'; sha = ''; }
+                }
+            } else { sha = ''; }
+        } catch(e) { sha = ''; }
+        
         const newContent = JSON.stringify({workorders: workorders, updateTime: new Date().toISOString()}, null, 2);
-        const body = { description: '工单数据', public: false, files: {} };
+        
+        const body = { 
+            description: '工单数据', 
+            public: false, 
+            files: {} 
+        };
         body.files[fileName] = { content: newContent };
         if(sha) body.files[fileName].sha = sha;
-        const r = await fetch('https://api.github.com/gists/' + gistId, { method: 'PATCH', headers: { 'Authorization': 'token ' + GITHUB_TOKEN, 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
-        if(r.ok) { showSyncStatus('✅ 已保存', 'ok'); alert('保存成功！'); }
-        else { showSyncStatus('❌ 保存失败', 'err'); alert('保存失败'); }
+        
+        const r = await fetch('https://api.github.com/gists/' + gistId, { 
+            method: 'PATCH', 
+            headers: { 
+                'Authorization': 'token ' + GITHUB_TOKEN, 
+                'Content-Type': 'application/json' 
+            }, 
+            body: JSON.stringify(body) 
+        });
+        
+        if(r.ok) { 
+            cachedGistSha = (await r.json()).history[0].version;
+            showSyncStatus('✅ 已保存', 'ok'); 
+            alert('保存成功！'); 
+        } else {
+            const err = await r.text();
+            showSyncStatus('❌ 保存失败', 'err'); 
+            alert('保存失败: ' + err);
+        }
     } catch(e) { showSyncStatus('❌ 保存失败', 'err'); alert('保存失败: ' + e.message); }
 }
 
