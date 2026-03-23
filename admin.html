@@ -18,6 +18,8 @@
         .badge-审批中 { background: #a29bfe; color: #6c5ce7; }
         .badge-已完成 { background: #55efc4; color: #00b894; }
         .overdue { color: #d63031; font-weight: bold; }
+        .clickable { cursor: pointer; }
+        .clickable:hover { text-decoration: underline; }
     </style>
 </head>
 <body>
@@ -114,18 +116,23 @@
                 
                 <div class="card mb-3">
                     <div class="card-body">
-                        <div class="row">
+                        <div class="row g-2">
                             <div class="col-md-3">
-                                <input type="text" class="form-control" id="search-order" placeholder="机构名称模糊查询..." onkeyup="renderWorkorders()">
+                                <input type="text" class="form-control" id="search-order" placeholder="机构名称模糊查询...">
                             </div>
                             <div class="col-md-3">
-                                <input type="date" class="form-control" id="search-date-start" onchange="renderWorkorders()">
+                                <input type="date" class="form-control" id="search-date-start">
                             </div>
                             <div class="col-md-3">
-                                <input type="date" class="form-control" id="search-date-end" onchange="renderWorkorders()">
+                                <input type="date" class="form-control" id="search-date-end">
                             </div>
                             <div class="col-md-3">
-                                <button class="btn btn-success w-100" onclick="exportExcel()"><i class="bi bi-download"></i> 导出Excel</button>
+                                <button class="btn btn-primary w-100" onclick="renderWorkorders()"><i class="bi bi-search"></i> 查询</button>
+                            </div>
+                        </div>
+                        <div class="row g-2 mt-2">
+                            <div class="col-md-12">
+                                <button class="btn btn-success" onclick="exportExcel()"><i class="bi bi-download"></i> 导出Excel</button>
                             </div>
                         </div>
                     </div>
@@ -157,11 +164,18 @@
                         <div class="row text-center">
                             <div class="col-md-2"><div class="text-muted">本月工单</div><h3 id="month-total">0</h3></div>
                             <div class="col-md-2"><div class="text-muted">本月已完成</div><h3 class="text-success" id="month-done">0</h3></div>
-                            <div class="col-md-2"><div class="text-muted" style="cursor:pointer" onclick="showPendingDetail('month')">本月未完成</div><h3 class="text-warning" id="month-pending">0</h3></div>
+                            <div class="col-md-2"><div class="text-muted clickable" onclick="showPendingDetail('month')">本月未完成</div><h3 class="text-warning clickable" onclick="showPendingDetail('month')" id="month-pending">0</h3></div>
                             <div class="col-md-2"><div class="text-muted">本周工单</div><h3 id="week-total">0</h3></div>
                             <div class="col-md-2"><div class="text-muted">本周已完成</div><h3 class="text-success" id="week-done">0</h3></div>
-                            <div class="col-md-2"><div class="text-muted">平均响应时长</div><h3 id="avg-response">0h</h3></div>
+                            <div class="col-md-2"><div class="text-muted clickable" onclick="showPendingDetail('week')">本周未完成</div><h3 class="text-warning clickable" onclick="showPendingDetail('week')" id="week-pending">0</h3></div>
                         </div>
+                    </div>
+                </div>
+                
+                <div class="card mb-4">
+                    <div class="card-body text-center">
+                        <div class="text-muted">平均响应时长</div>
+                        <h2 id="avg-response">0h</h2>
                     </div>
                 </div>
                 
@@ -176,6 +190,24 @@
                         <div class="table-responsive">
                             <h5>各供应商响应时长对比</h5>
                             <canvas id="chart-response" height="200"></canvas>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 未完成工单明细弹窗 -->
+                <div class="modal fade" id="pendingModal" tabindex="-1">
+                    <div class="modal-dialog modal-lg">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title" id="pendingModalTitle">未完成工单</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                            </div>
+                            <div class="modal-body">
+                                <table class="table table-sm" id="pending-table">
+                                    <thead><tr><th>工单号</th><th>机构</th><th>设备</th><th>状态</th><th>创建时间</th></tr></thead>
+                                    <tbody></tbody>
+                                </table>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -199,35 +231,22 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script src="https://cdn.sheetjs.com/xlsx-0.20.0/package/dist/xlsx.full.min.js"></script>
 <script>
-// 完整运维商数据（从Excel提取）
 const vendors = [
-    // 存取款一体机/ATM - 中电
     {type:'存取款一体机/ATM', brand:'中电', vendor:'广东奔腾达电子有限公司', contact:'周洪啸', phone:'18176252256', note:'桂银安保APP报修'},
     {type:'存取款一体机/ATM', brand:'日立', vendor:'江苏国光信息产业股份有限公司', contact:'苏乃锋', phone:'19977164610'},
     {type:'存取款一体机/ATM', brand:'OKI', vendor:'广东奔腾达电子有限公司', contact:'韩东', phone:'18178601382'},
-    // 高速大额存取款机
     {type:'高速大额存取款机', brand:'长城', vendor:'广东奔腾达电子有限公司', contact:'韩东', phone:'18178601382'},
     {type:'高速大额存取款机', brand:'中电', vendor:'广西建投桂银科技有限公司', contact:'郭亮', phone:'13977160058'},
-    // 回单机/自助终端
     {type:'回单机/自助终端', brand:'南天', vendor:'广州南天电脑系统有限公司', contact:'梁太钦', phone:'13877130518'},
-    // 综合版智能柜台
     {type:'综合版智能柜台', brand:'中软', vendor:'广西佰鼎科技有限公司', contact:'莫德文', phone:'18278387986'},
     {type:'综合版智能柜台', brand:'长城', vendor:'广东奔腾达电子有限公司', contact:'肖俊宏', phone:'13878748626'},
-    // 标准版智能柜台
     {type:'标准版智能柜台', brand:'长城', vendor:'广东奔腾达电子有限公司', contact:'肖俊宏', phone:'13878748626'},
-    // 网银一体机/LED走字屏
     {type:'网银一体机/LED走字屏', brand:'联想', vendor:'广西佳仕运网络科技有限公司', contact:'陈剑云', phone:'13977300180', note:'分行后勤维修群报修'},
-    // 空调维护
     {type:'空调维护', brand:'/', vendor:'广西南宁市源申隆贸易有限公司', contact:'陈国斌', phone:'19077164249'},
-    // 零星维修
     {type:'零星维修', brand:'/', vendor:'广西三弦建设工程有限公司', contact:'曾海龙', phone:'13407718924'},
-    // 叫号机/宣传屏
     {type:'叫号机/宣传屏', brand:'/', vendor:'桂林宇峰电子科技有限公司', contact:'唐孝纯', phone:'18178357885'},
-    // 征信查询机
     {type:'征信查询机', brand:'/', vendor:'北京信立合创信息技术有限公司', contact:'谭因金', phone:'13878372640'},
-    // 移动营销/底座/GPS
-    {type:'移动营销/底座/GPS', brand:'联想/华为/至高/信雅达', vendor:'业务问题请在企业微信群反馈，设备故障请在分行后勤维修群报修', contact:'', phone:''},
-    // 其他
+    {type:'移动营销/底座/GPS', brand:'联想/华为/至高/信雅达', vendor:'请在企业微信群反馈', contact:'', phone:''},
     {type:'其他', brand:'', vendor:'待分配', contact:'', phone:''},
 ];
 
@@ -370,7 +389,6 @@ function renderWorkorders(){
         return true;
     });
     
-    // 按时间晚-早排序（最新在前）
     f.sort((a,b) => new Date(b.createTime) - new Date(a.createTime));
     
     const oneWeekAgo = new Date(now.getTime() - 7*86400000);
@@ -405,7 +423,12 @@ function showPendingDetail(type) {
         ? workorders.filter(o => new Date(o.createTime) >= monthStart && o.status !== '已完成')
         : workorders.filter(o => new Date(o.createTime) >= weekAgo && o.status !== '已完成');
     
-    alert((type==='month'?'本月':'本周')+'未完成工单：\n\n' + orders.map(o=>o.id+' '+o.dept+' '+o.device).join('\n'));
+    document.getElementById('pendingModalTitle').textContent = (type==='month'?'本月':'本周')+'未完成工单 ('+orders.length+'条)';
+    document.querySelector('#pending-table tbody').innerHTML = orders.map(o => 
+        '<tr><td>'+o.id+'</td><td>'+o.dept+'</td><td>'+o.device+'</td><td><span class="badge badge-'+o.status+'">'+o.status+'</span></td><td>'+new Date(o.createTime).toLocaleString()+'</td></tr>'
+    ).join('');
+    
+    new bootstrap.Modal(document.getElementById('pendingModal')).show();
 }
 
 function renderDashboard(){
@@ -419,6 +442,7 @@ function renderDashboard(){
     
     const weekOrders = workorders.filter(o => new Date(o.createTime) >= weekAgo);
     const weekDone = weekOrders.filter(o => o.status === '已完成').length;
+    const weekPending = weekOrders.filter(o => o.status !== '已完成').length;
     
     let avgHours = '0h';
     const doneOrders = workorders.filter(o => o.status === '已完成' && o.assignTime);
@@ -432,6 +456,7 @@ function renderDashboard(){
     document.getElementById('month-pending').textContent = monthPending;
     document.getElementById('week-total').textContent = weekOrders.length;
     document.getElementById('week-done').textContent = weekDone;
+    document.getElementById('week-pending').textContent = weekPending;
     document.getElementById('avg-response').textContent = avgHours;
     
     const vendorCount = {};
