@@ -18,7 +18,6 @@
         .badge-审批中 { background: #a29bfe; color: #6c5ce7; }
         .badge-已完成 { background: #55efc4; color: #00b894; }
         .overdue { color: #d63031; font-weight: bold; }
-        .hidden-order { display: none; }
     </style>
 </head>
 <body>
@@ -77,10 +76,14 @@
                                     <option value="存取款一体机/ATM">存取款一体机/ATM</option>
                                     <option value="高速大额存取款机">高速大额存取款机</option>
                                     <option value="回单机/自助终端">回单机/自助终端</option>
-                                    <option value="智能柜台">智能柜台</option>
-                                    <option value="LED显示屏">LED显示屏</option>
-                                    <option value="空调">空调</option>
-                                    <option value="叫号机">叫号机</option>
+                                    <option value="综合版智能柜台">综合版智能柜台</option>
+                                    <option value="标准版智能柜台">标准版智能柜台</option>
+                                    <option value="网银一体机/LED走字屏">网银一体机/LED走字屏</option>
+                                    <option value="空调维护">空调维护</option>
+                                    <option value="零星维修">零星维修</option>
+                                    <option value="叫号机/宣传屏">叫号机/宣传屏</option>
+                                    <option value="征信查询机">征信查询机</option>
+                                    <option value="移动营销/底座/GPS">移动营销/底座/GPS</option>
                                     <option value="其他">其他</option>
                                 </select>
                             </div>
@@ -109,7 +112,6 @@
             <div id="page-workorders">
                 <h4 class="mb-4"><i class="bi bi-file-earmark-text"></i> 工单管理</h4>
                 
-                <!-- 搜索和筛选 -->
                 <div class="card mb-3">
                     <div class="card-body">
                         <div class="row">
@@ -129,7 +131,6 @@
                     </div>
                 </div>
                 
-                <!-- 状态筛选 -->
                 <div class="d-flex gap-2 mb-3">
                     <button class="btn btn-outline-secondary" onclick="filterStatus('all')">全部</button>
                     <button class="btn btn-outline-info" onclick="filterStatus('响应中')">响应中</button>
@@ -140,7 +141,7 @@
                 <div class="table-responsive">
                     <table class="table table-hover" id="workorder-table">
                         <thead class="table-light">
-                            <tr><th>工单号</th><th>机构/网点</th><th>设备类型</th><th>故障描述</th><th>状态</th><th>运维商</th><th>创建时间</th><th>操作</th></tr>
+                            <tr><th>工单号</th><th>机构/网点</th><th>设备类型</th><th>故障描述</th><th>状态</th><th>运维商</th><th>创建时间</th></tr>
                         </thead>
                         <tbody></tbody>
                     </table>
@@ -151,39 +152,19 @@
             <div id="page-dashboard">
                 <h4 class="mb-4"><i class="bi bi-speedometer2"></i> 数据看板</h4>
                 
-                <!-- 统计 -->
                 <div class="card mb-4">
                     <div class="card-body">
                         <div class="row text-center">
-                            <div class="col-md-2">
-                                <div class="text-muted">本月工单</div>
-                                <h3 id="month-total">0</h3>
-                            </div>
-                            <div class="col-md-2">
-                                <div class="text-muted">本月已完成</div>
-                                <h3 class="text-success" id="month-done">0</h3>
-                            </div>
-                            <div class="col-md-2">
-                                <div class="text-muted" style="cursor:pointer" onclick="showPendingDetail('month')">本月未完成</div>
-                                <h3 class="text-warning" id="month-pending">0</h3>
-                            </div>
-                            <div class="col-md-2">
-                                <div class="text-muted">本周工单</div>
-                                <h3 id="week-total">0</h3>
-                            </div>
-                            <div class="col-md-2">
-                                <div class="text-muted">本周已完成</div>
-                                <h3 class="text-success" id="week-done">0</h3>
-                            </div>
-                            <div class="col-md-2">
-                                <div class="text-muted">平均响应时长</div>
-                                <h3 id="avg-response">0h</h3>
-                            </div>
+                            <div class="col-md-2"><div class="text-muted">本月工单</div><h3 id="month-total">0</h3></div>
+                            <div class="col-md-2"><div class="text-muted">本月已完成</div><h3 class="text-success" id="month-done">0</h3></div>
+                            <div class="col-md-2"><div class="text-muted" style="cursor:pointer" onclick="showPendingDetail('month')">本月未完成</div><h3 class="text-warning" id="month-pending">0</h3></div>
+                            <div class="col-md-2"><div class="text-muted">本周工单</div><h3 id="week-total">0</h3></div>
+                            <div class="col-md-2"><div class="text-muted">本周已完成</div><h3 class="text-success" id="week-done">0</h3></div>
+                            <div class="col-md-2"><div class="text-muted">平均响应时长</div><h3 id="avg-response">0h</h3></div>
                         </div>
                     </div>
                 </div>
                 
-                <!-- 图表 -->
                 <div class="row">
                     <div class="col-md-6">
                         <div class="table-responsive">
@@ -203,7 +184,12 @@
             <!-- 运维商 -->
             <div id="page-vendors" style="display:none;">
                 <h4 class="mb-4"><i class="bi bi-people"></i> 运维商信息</h4>
-                <div class="table-responsive"><table class="table table-hover" id="vendor-table"><thead><tr><th>设备类型</th><th>运维商</th><th>联系人</th><th>电话</th></tr></thead><tbody></tbody></table></div>
+                <div class="table-responsive">
+                    <table class="table table-hover" id="vendor-table">
+                        <thead><tr><th>设备类型</th><th>品牌</th><th>运维商</th><th>联系人</th><th>电话</th><th>备注</th></tr></thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
             </div>
         </div>
     </div>
@@ -213,16 +199,36 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script src="https://cdn.sheetjs.com/xlsx-0.20.0/package/dist/xlsx.full.min.js"></script>
 <script>
+// 完整运维商数据（从Excel提取）
 const vendors = [
-    {type:'存取款一体机/ATM', vendor:'广东奔腾达电子有限公司', contact:'周洪啸/韩东', phone:'18176252256'},
-    {type:'高速大额存取款机', vendor:'广东奔腾达电子有限公司', contact:'韩东', phone:'18178601382'},
-    {type:'回单机/自助终端', vendor:'广州南天电脑系统有限公司', contact:'梁太钦', phone:'13877130518'},
-    {type:'智能柜台', vendor:'广西佰鼎科技有限公司', contact:'莫德文', phone:'18278387986'},
-    {type:'LED显示屏', vendor:'广西佳仕运网络科技有限公司', contact:'陈剑云', phone:'13977300180'},
-    {type:'空调', vendor:'广西南宁市源申隆贸易有限公司', contact:'陈国斌', phone:'19077164249'},
-    {type:'零星维修', vendor:'广西三弦建设工程有限公司', contact:'曾海龙', phone:'13407718924'},
-    {type:'叫号机', vendor:'桂林宇峰电子科技有限公司', contact:'唐孝纯', phone:'18178357885'},
-    {type:'其他', vendor:'待分配', contact:'', phone:''},
+    // 存取款一体机/ATM - 中电
+    {type:'存取款一体机/ATM', brand:'中电', vendor:'广东奔腾达电子有限公司', contact:'周洪啸', phone:'18176252256', note:'桂银安保APP报修'},
+    {type:'存取款一体机/ATM', brand:'日立', vendor:'江苏国光信息产业股份有限公司', contact:'苏乃锋', phone:'19977164610'},
+    {type:'存取款一体机/ATM', brand:'OKI', vendor:'广东奔腾达电子有限公司', contact:'韩东', phone:'18178601382'},
+    // 高速大额存取款机
+    {type:'高速大额存取款机', brand:'长城', vendor:'广东奔腾达电子有限公司', contact:'韩东', phone:'18178601382'},
+    {type:'高速大额存取款机', brand:'中电', vendor:'广西建投桂银科技有限公司', contact:'郭亮', phone:'13977160058'},
+    // 回单机/自助终端
+    {type:'回单机/自助终端', brand:'南天', vendor:'广州南天电脑系统有限公司', contact:'梁太钦', phone:'13877130518'},
+    // 综合版智能柜台
+    {type:'综合版智能柜台', brand:'中软', vendor:'广西佰鼎科技有限公司', contact:'莫德文', phone:'18278387986'},
+    {type:'综合版智能柜台', brand:'长城', vendor:'广东奔腾达电子有限公司', contact:'肖俊宏', phone:'13878748626'},
+    // 标准版智能柜台
+    {type:'标准版智能柜台', brand:'长城', vendor:'广东奔腾达电子有限公司', contact:'肖俊宏', phone:'13878748626'},
+    // 网银一体机/LED走字屏
+    {type:'网银一体机/LED走字屏', brand:'联想', vendor:'广西佳仕运网络科技有限公司', contact:'陈剑云', phone:'13977300180', note:'分行后勤维修群报修'},
+    // 空调维护
+    {type:'空调维护', brand:'/', vendor:'广西南宁市源申隆贸易有限公司', contact:'陈国斌', phone:'19077164249'},
+    // 零星维修
+    {type:'零星维修', brand:'/', vendor:'广西三弦建设工程有限公司', contact:'曾海龙', phone:'13407718924'},
+    // 叫号机/宣传屏
+    {type:'叫号机/宣传屏', brand:'/', vendor:'桂林宇峰电子科技有限公司', contact:'唐孝纯', phone:'18178357885'},
+    // 征信查询机
+    {type:'征信查询机', brand:'/', vendor:'北京信立合创信息技术有限公司', contact:'谭因金', phone:'13878372640'},
+    // 移动营销/底座/GPS
+    {type:'移动营销/底座/GPS', brand:'联想/华为/至高/信雅达', vendor:'业务问题请在企业微信群反馈，设备故障请在分行后勤维修群报修', contact:'', phone:''},
+    // 其他
+    {type:'其他', brand:'', vendor:'待分配', contact:'', phone:''},
 ];
 
 let workorders = JSON.parse(localStorage.getItem('workorders') || '[]');
@@ -237,7 +243,11 @@ function saveWorkorders() {
 
 function getVendorByDevice(device) {
     const v = vendors.find(x => device.includes(x.type.split('/')[0]) || x.type.includes(device));
-    return v ? v.vendor : '待分配';
+    return v ? v : null;
+}
+
+function getVendorList(device) {
+    return vendors.filter(x => device.includes(x.type.split('/')[0]) || x.type.includes(device) || x.type === '其他');
 }
 
 function generateOrderNo() {
@@ -249,7 +259,8 @@ function analyzeWorkorder() {
     const input = document.getElementById('ai-input').value;
     if(!input.trim()){alert('请输入工单信息');return;}
     
-    let dept='', address='', person='', phone='', device='其他', desc='', vendor='待分配';
+    let dept='', address='', person='', phone='', device='其他', desc='';
+    let matchedVendor = null;
     
     const deptMatch = input.match(/报修部门[：:]\s*(.+?)(?:\n|$)/);
     if(deptMatch) dept = deptMatch[1].trim();
@@ -279,17 +290,20 @@ function analyzeWorkorder() {
     if(lower.includes('atm')||lower.includes('取款机')) device='存取款一体机/ATM';
     else if(lower.includes('高速')||lower.includes('大额')) device='高速大额存取款机';
     else if(lower.includes('回单')||lower.includes('自助终端')) device='回单机/自助终端';
-    else if(lower.includes('智能柜台')) device='智能柜台';
-    else if(lower.includes('led')||lower.includes('显示屏')||lower.includes('灯箱')) device='LED显示屏';
-    else if(lower.includes('空调')) device='空调';
-    else if(lower.includes('叫号')) device='叫号机';
+    else if(lower.includes('综合版')||lower.includes('综合智能柜台')) device='综合版智能柜台';
+    else if(lower.includes('标准版')||lower.includes('智能柜台')) device='标准版智能柜台';
+    else if(lower.includes('led')||lower.includes('显示屏')||lower.includes('灯箱')||lower.includes('网银一体机')) device='网银一体机/LED走字屏';
+    else if(lower.includes('空调')) device='空调维护';
+    else if(lower.includes('叫号')||lower.includes('宣传屏')) device='叫号机/宣传屏';
+    else if(lower.includes('征信')||lower.includes('查询机')) device='征信查询机';
+    else if(lower.includes('移动营销')||lower.includes('底座')||lower.includes('gps')) device='移动营销/底座/GPS';
+    else if(lower.includes('零星')||lower.includes('维修')) device='零星维修';
     
-    vendor = getVendorByDevice(device);
+    matchedVendor = getVendorByDevice(device);
     if(!address && dept) address = dept;
     
-    analyzedData = {dept, address, person, phone, device, desc, vendor};
+    analyzedData = {dept, address, person, phone, device, desc, vendor: matchedVendor};
     
-    // 填充表单
     document.getElementById('edit-dept').value = dept || '';
     document.getElementById('edit-address').value = address || '';
     document.getElementById('edit-person').value = person || '';
@@ -297,9 +311,9 @@ function analyzeWorkorder() {
     document.getElementById('edit-device').value = device;
     document.getElementById('edit-desc').value = desc || '';
     
-    // 填充运维商下拉
     const sel = document.getElementById('edit-vendor');
-    sel.innerHTML = vendors.map(v => '<option value="'+v.vendor+'" '+(v.vendor===vendor?'selected':'')+'>'+v.vendor+' ('+v.type+') - '+v.contact+' '+v.phone+'</option>').join('');
+    const vendorList = getVendorList(device);
+    sel.innerHTML = vendorList.map(v => '<option value="'+v.vendor+'" '+(v.vendor === (matchedVendor?matchedVendor.vendor:'') ?'selected':'')+'>'+v.vendor+' ('+v.type+') - '+v.contact+' '+v.phone+'</option>').join('');
     
     document.getElementById('analysis-result').style.display = 'block';
     document.getElementById('success-result').style.display = 'none';
@@ -329,7 +343,6 @@ function confirmCreate() {
     document.getElementById('analysis-result').style.display = 'none';
     document.getElementById('ai-input').value = '';
     
-    const vc = vendors.find(v => v.vendor === order.vendor);
     document.getElementById('success-content').innerHTML = '<h4>工单号：'+order.id+'</h4><p>机构：'+order.dept+'</p><p>设备：'+order.device+'</p><p>运维商：'+order.vendor+'</p><p>状态：<span class="badge badge-响应中">响应中</span></p>';
     document.getElementById('success-result').style.display = 'block';
     analyzedData = null;
@@ -343,12 +356,10 @@ function renderWorkorders(){
     const dateEnd = document.getElementById('search-date-end').value;
     
     let f = workorders.filter(o => {
-        // 超过1周完成的隐藏
         if(o.status === '已完成' && o.completeTime) {
             const completeDate = new Date(o.completeTime);
             if(now - completeDate > 7*86400000) return false;
         }
-        // 筛选
         if(currentFilter !== 'all' && o.status !== currentFilter) return false;
         if(search && !(o.dept||'').toLowerCase().includes(search) && !(o.vendor||'').toLowerCase().includes(search)) return false;
         if(dateStart || dateEnd) {
@@ -359,16 +370,15 @@ function renderWorkorders(){
         return true;
     });
     
-    // 按时间早-晚排序
-    f.sort((a,b) => new Date(a.createTime) - new Date(b.createTime));
+    // 按时间晚-早排序（最新在前）
+    f.sort((a,b) => new Date(b.createTime) - new Date(a.createTime));
     
-    // 检查是否超过1周未完成
     const oneWeekAgo = new Date(now.getTime() - 7*86400000);
     
     document.querySelector('#workorder-table tbody').innerHTML = f.map(o => {
         const isOverdue = o.status !== '已完成' && new Date(o.createTime) < oneWeekAgo;
         const rowClass = isOverdue ? 'overdue' : '';
-        return '<tr class="'+rowClass+'"><td>'+o.id+'</td><td>'+o.dept+'</td><td>'+o.device+'</td><td>'+(o.desc||'-').substring(0,15)+'</td><td><select class="form-select form-select-sm" style="width:auto;display:inline-block" onchange="changeStatus(\''+o.id+'\',this.value)"><option '+(o.status==='响应中'?'selected':'')+'>响应中</option><option '+(o.status==='审批中'?'selected':'')+'>审批中</option><option '+(o.status==='已完成'?'selected':'')+'>已完成</option></select></td><td>'+(o.vendor||'-')+'</td><td>'+new Date(o.createTime).toLocaleString()+'</td><td></td></tr>';
+        return '<tr class="'+rowClass+'"><td>'+o.id+'</td><td>'+o.dept+'</td><td>'+o.device+'</td><td>'+(o.desc||'-').substring(0,15)+'</td><td><select class="form-select form-select-sm" style="width:auto;display:inline-block" onchange="changeStatus(\''+o.id+'\',this.value)"><option '+(o.status==='响应中'?'selected':'')+'>响应中</option><option '+(o.status==='审批中'?'selected':'')+'>审批中</option><option '+(o.status==='已完成'?'selected':'')+'>已完成</option></select></td><td>'+(o.vendor||'-')+'</td><td>'+new Date(o.createTime).toLocaleString()+'</td></tr>';
     }).join('');
 }
 
@@ -424,7 +434,6 @@ function renderDashboard(){
     document.getElementById('week-done').textContent = weekDone;
     document.getElementById('avg-response').textContent = avgHours;
     
-    // 供应商工单分布
     const vendorCount = {};
     monthOrders.forEach(o => { vendorCount[o.vendor] = (vendorCount[o.vendor]||0)+1 });
     
@@ -436,7 +445,6 @@ function renderDashboard(){
         options: {indexAxis: 'y'}
     });
     
-    // 响应时长
     const vendorTime = {};
     doneOrders.forEach(o => {
         if(o.assignTime) {
@@ -460,7 +468,7 @@ function renderDashboard(){
 }
 
 function renderVendors(){
-    document.querySelector('#vendor-table tbody').innerHTML = vendors.map(v=>'<tr><td>'+v.type+'</td><td>'+v.vendor+'</td><td>'+(v.contact||'-')+'</td><td>'+(v.phone||'-')+'</td></tr>').join('');
+    document.querySelector('#vendor-table tbody').innerHTML = vendors.map(v=>'<tr><td>'+v.type+'</td><td>'+(v.brand||'-')+'</td><td>'+v.vendor+'</td><td>'+(v.contact||'-')+'</td><td>'+(v.phone||'-')+'</td><td>'+(v.note||'-')+'</td></tr>').join('');
 }
 
 function exportExcel(){
