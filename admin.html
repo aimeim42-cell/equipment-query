@@ -77,8 +77,7 @@
                         <button class="btn btn-outline-success btn-sm" onclick="filterStatus('已完成')">已完成</button>
                     </div>
                     <div>
-                        <button class="btn btn-info btn-sm me-1" onclick="syncData()">同步</button>
-                        <button class="btn btn-success btn-sm" onclick="exportExcel()">导出</button>
+                        <button class="btn btn-success btn-sm" onclick="exportExcel()">导出Excel</button>
                     </div>
                 </div>
                 <div class="card mb-3">
@@ -88,7 +87,7 @@
                             <div class="col-6 col-md-2"><input type="date" class="form-control form-control-sm" id="search-date-start"></div>
                             <div class="col-6 col-md-2"><input type="date" class="form-control form-control-sm" id="search-date-end"></div>
                             <div class="col-6 col-md-2"><button class="btn btn-primary btn-sm w-100" onclick="renderWorkorders()">查询</button></div>
-                            <div class="col-6 col-md-3"><button class="btn btn-warning btn-sm w-100" onclick="uploadToCloud()">上传保存</button></div>
+                            <div class="col-6 col-md-3"><button class="btn btn-warning btn-sm w-100" onclick="importData()">导入数据</button></div>
                         </div>
                     </div>
                 </div>
@@ -98,6 +97,14 @@
                         <tbody></tbody>
                     </table>
                 </div>
+                <div class="d-flex justify-content-between align-items-center mt-3">
+                    <div class="text-muted small" id="page-info"></div>
+                    <div>
+                        <button class="btn btn-sm btn-outline-secondary" onclick="changePage(-1)" id="btn-prev">上一页</button>
+                        <button class="btn btn-sm btn-outline-secondary" onclick="changePage(1)" id="btn-next">下一页</button>
+                    </div>
+                </div>
+                <input type="file" id="import-file" style="display:none" accept=".json" onchange="doImport(this)">
             </div>
             
             <div id="page-dashboard" style="display:none;">
@@ -139,26 +146,17 @@
                     </div>
                 </div>
                 <div class="card mb-3">
-                    <div class="card-header">云端同步设置</div>
+                    <div class="card-header">数据同步（通过文件）</div>
                     <div class="card-body">
-                        <p class="small">首次使用需配置GitHub Token</p>
-                        <div class="mb-2"><input type="password" class="form-control form-control-sm" id="github-token" placeholder="粘贴GitHub Token"></div>
-                        <button class="btn btn-primary btn-sm" onclick="saveGitHubToken()">保存Token</button>
-                        <p class="small mt-2 text-muted">Token获取: github.com/settings/tokens (需repo权限)</p>
-                    </div>
-                </div>
-                <div class="card mb-3">
-                    <div class="card-header">云端同步</div>
-                    <div class="card-body">
-                        <p class="small">PC和手机数据同步</p>
-                        <button class="btn btn-primary btn-sm me-2" onclick="syncData()">从云端下载</button>
-                        <button class="btn btn-success btn-sm" onclick="uploadToCloud()">上传到云端</button>
+                        <p class="small">方法：在一个设备点击"导出Excel"保存文件，发送到另一设备后点击"导入数据"</p>
+                        <button class="btn btn-success btn-sm" onclick="exportData()">导出JSON</button>
+                        <button class="btn btn-warning btn-sm" onclick="document.getElementById('import-file').click()">导入JSON</button>
                     </div>
                 </div>
                 <div class="card">
                     <div class="card-header">数据安全</div>
                     <div class="card-body">
-                        <button class="btn btn-warning btn-sm" onclick="clearData()">清除数据</button>
+                        <button class="btn btn-danger btn-sm" onclick="clearData()">清除所有数据</button>
                     </div>
                 </div>
             </div>
@@ -172,7 +170,6 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script>
-const REPO = "aimeim42-cell/equipment-query";
 const vendors = [
     {type:'存取款一体机/ATM',vendor:'广东奔腾达电子有限公司',contact:'周洪啸/韩东',phone:'18176252256'},
     {type:'高速大额存取款机',vendor:'广东奔腾达电子有限公司',contact:'韩东',phone:'18178601382'},
@@ -190,52 +187,8 @@ const vendors = [
 let workorders = JSON.parse(localStorage.getItem('workorders') || '[]');
 let currentFilter = 'all';
 let analyzedData = null;
-
-const T1 = 'ghp_LFiwst';
-const T2 = 'gWK9s6iNFS';
-const T3 = 'AGXgfUF0ypN2ky0EQrzR';
-function getToken() { return T1 + T2 + T3; }
-
-async function syncData() {
-    const token = getToken();
-    if(!token) { alert('请先在设置中配置GitHub Token'); showPage('settings'); return; }
-    alert('正在下载...');
-    try {
-        const r = await fetch('https://api.github.com/repos/' + REPO + '/contents/data.json', {headers:{'Authorization':'token ' + token}});
-        if(r.ok) {
-            const d = await r.json();
-            const c = JSON.parse(atob(d.content));
-            if(c.workorders) {
-                workorders = c.workorders;
-                localStorage.setItem('workorders', JSON.stringify(workorders));
-                renderWorkorders(); renderDashboard();
-                alert('同步成功！' + workorders.length + '条');
-            }
-        } else { alert('云端无数据'); }
-    } catch(e) { alert('同步失败: ' + e.message); }
-}
-
-async function uploadToCloud() {
-    const token = getToken();
-    if(!token) { alert('请先在设置中配置GitHub Token'); showPage('settings'); return; }
-    alert('正在上传...');
-    try {
-        let sha = '';
-        try { const r = await fetch('https://api.github.com/repos/' + REPO + '/contents/data.json', {headers:{'Authorization':'token ' + token}}); if(r.ok) sha = (await r.json()).sha; } catch(e){}
-        const content = btoa(unescape(encodeURIComponent(JSON.stringify({workorders:workorders,time:new Date().toISOString()}))));
-        const body = JSON.stringify({message:'Update data',content:content,sha:sha});
-        const r = await fetch('https://api.github.com/repos/' + REPO + '/contents/data.json', {method:'PUT',headers:{'Authorization':'token ' + token,'Content-Type':'application/json'},body:body});
-        if(r.ok) alert('上传成功！'); else alert('上传失败');
-    } catch(e) { alert('上传失败: ' + e.message); }
-}
-
-function saveGitHubToken() {
-    const token = document.getElementById('github-token').value.trim();
-    if(token) {
-        localStorage.setItem('github_token', token);
-        alert('GitHub Token保存成功！');
-    }
-}
+let currentPage = 1;
+const PAGE_SIZE = 30;
 
 function checkLogin() {
     const s = JSON.parse(localStorage.getItem('settings') || '{}');
@@ -250,7 +203,7 @@ document.getElementById('login-form').addEventListener('submit', function(e) {
     const p = document.getElementById('login-password').value;
     const s = JSON.parse(localStorage.getItem('settings') || '{}');
     if(!s.username) { localStorage.setItem('settings',JSON.stringify({username:u,password:p})); alert('设置成功！'); document.getElementById('login-page').style.display='none';document.getElementById('main-system').style.display='block'; }
-    else if(u===s.username && p===s.password) { document.getElementById('login-page').style.display='none';document.getElementById('main-system').style.display='block';syncData(); }
+    else if(u===s.username && p===s.password) { document.getElementById('login-page').style.display='none';document.getElementById('main-system').style.display='block'; }
     else { alert('错误'); }
 });
 
@@ -298,15 +251,43 @@ function confirmCreate(){
     document.getElementById('success-result').style.display='block';analyzedData=null;
 }
 
-function renderWorkorders(){
+function getFilteredOrders(){
     const now=new Date();const s=document.getElementById('search-order').value.toLowerCase();const ds=document.getElementById('search-date-start').value;const de=document.getElementById('search-date-end').value;
-    let f=workorders.filter(o=>{if(o.status==='已完成'&&o.completeTime&&now-new Date(o.completeTime)>7*86400000)return false;if(currentFilter!=='all'&&o.status!==currentFilter)return false;if(s&&!(o.dept||'').toLowerCase().includes(s))return false;if(ds||de){const c=new Date(o.createTime).toISOString().split('T')[0];if(ds&&c<ds)return false;if(de&&c>de)return false}return true;});
-    f.sort((a,b)=>new Date(b.createTime)-new Date(a.createTime));
-    const ow=new Date(now.getTime()-7*86400000);
-    document.querySelector('#workorder-table tbody').innerHTML=f.map(o=>'<tr class="'+(o.status!=='已完成'&&new Date(o.createTime)<ow?'overdue':'')+'"><td>'+o.id+'</td><td>'+o.dept+'</td><td>'+o.device+'</td><td><select class="form-select form-select-sm" style="width:auto" onchange="changeStatus(\''+o.id+'\',this.value)"><option '+(o.status==='响应中'?'selected':'')+'>响应中</option><option '+(o.status==='审批中'?'selected':'')+'>审批中</option><option '+(o.status==='已完成'?'selected':'')+'>已完成</option></select></td><td>'+(o.vendor||'-')+'</td><td>'+new Date(o.createTime).toLocaleDateString()+'</td></tr>').join('');
+    return workorders.filter(o=>{
+        if(o.status==='已完成'&&o.completeTime&&now-new Date(o.completeTime)>7*86400000)return false;
+        if(currentFilter!=='all'&&o.status!==currentFilter)return false;
+        if(s&&!(o.dept||'').toLowerCase().includes(s))return false;
+        if(ds||de){const c=new Date(o.createTime).toISOString().split('T')[0];if(ds&&c<ds)return false;if(de&&c>de)return false}
+        return true;
+    }).sort((a,b)=>new Date(b.createTime)-new Date(a.createTime));
 }
 
-function filterStatus(s){currentFilter=s;renderWorkorders();}
+function renderWorkorders(){
+    const filtered = getFilteredOrders();
+    const totalPages = Math.ceil(filtered.length / PAGE_SIZE) || 1;
+    if(currentPage > totalPages) currentPage = totalPages;
+    const start = (currentPage - 1) * PAGE_SIZE;
+    const end = start + PAGE_SIZE;
+    const pageData = filtered.slice(start, end);
+    const now=new Date();const ow=new Date(now.getTime()-7*86400000);
+    
+    document.querySelector('#workorder-table tbody').innerHTML=pageData.map(o=>'<tr class="'+(o.status!=='已完成'&&new Date(o.createTime)<ow?'overdue':'')+'"><td>'+o.id+'</td><td>'+o.dept+'</td><td>'+o.device+'</td><td><select class="form-select form-select-sm" style="width:auto" onchange="changeStatus(\''+o.id+'\',this.value)"><option '+(o.status==='响应中'?'selected':'')+'>响应中</option><option '+(o.status==='审批中'?'selected':'')+'>审批中</option><option '+(o.status==='已完成'?'selected':'')+'>已完成</option></select></td><td>'+(o.vendor||'-')+'</td><td>'+new Date(o.createTime).toLocaleDateString()+'</td></tr>').join('');
+    
+    document.getElementById('page-info').textContent = '共' + filtered.length + '条，第' + currentPage + '/' + totalPages + '页';
+    document.getElementById('btn-prev').disabled = currentPage <= 1;
+    document.getElementById('btn-next').disabled = currentPage >= totalPages;
+}
+
+function changePage(delta){
+    const filtered = getFilteredOrders();
+    const totalPages = Math.ceil(filtered.length / PAGE_SIZE) || 1;
+    currentPage += delta;
+    if(currentPage < 1) currentPage = 1;
+    if(currentPage > totalPages) currentPage = totalPages;
+    renderWorkorders();
+}
+
+function filterStatus(s){currentFilter=s;currentPage=1;renderWorkorders();}
 function changeStatus(id,s){const o=workorders.find(x=>x.id===id);if(o){o.status=s;if(s==='已完成')o.completeTime=new Date().toISOString();else o.completeTime=null;saveWorkorders();}}
 
 function showPendingDetail(t){const now=new Date();const ms=new Date(now.getFullYear(),now.getMonth(),1);const wa=new Date(now.getTime()-7*86400000);let os=t==='month'?workorders.filter(o=>new Date(o.createTime)>=ms&&o.status!=='已完成'):workorders.filter(o=>new Date(o.createTime)>=wa&&o.status!=='已完成');document.getElementById('pendingModalTitle').textContent=(t==='month'?'本月':'本周')+'未完成 ('+os.length+'条)';document.querySelector('#pending-table tbody').innerHTML=os.map(o=>'<tr><td>'+o.id+'</td><td>'+o.dept+'</td><td>'+o.device+'</td><td>'+o.status+'</td></tr>').join('');new bootstrap.Modal(document.getElementById('pendingModal')).show();}
@@ -328,6 +309,40 @@ function renderDashboard(){
 
 function renderVendors(){document.querySelector('#vendor-table tbody').innerHTML=vendors.map(v=>'<tr><td>'+v.type+'</td><td>'+v.vendor+'</td><td>'+(v.contact||'-')+'</td><td>'+(v.phone||'-')+'</td></tr>').join('');}
 function exportExcel(){const ws=XLSX.utils.json_to_sheet(workorders.map(o=>({工单号:o.id,机构:o.dept,设备:o.device,状态:o.status,运维商:o.vendor,创建:o.createTime})));XLSX.writeFile(XLSX.utils.book_new(ws,'工单'),'工单.xlsx');}
+
+function exportData(){
+    const data = JSON.stringify(workorders);
+    const blob = new Blob([data], {type: 'application/json'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = '工单数据_' + new Date().toISOString().split('T')[0] + '.json';
+    a.click();
+    URL.revokeObjectURL(url);
+}
+
+function importData(){
+    document.getElementById('import-file').click();
+}
+
+function doImport(input){
+    const file = input.files[0];
+    if(!file) return;
+    const reader = new FileReader();
+    reader.onload = function(e){
+        try{
+            const data = JSON.parse(e.target.result);
+            if(Array.isArray(data)){
+                workorders = data;
+                saveWorkorders();
+                alert('导入成功！共' + data.length + '条工单');
+            }else{alert('数据格式错误');}
+        }catch(err){alert('导入失败: ' + err.message);}
+    };
+    reader.readAsText(file);
+    input.value = '';
+}
+
 function showPage(p){document.querySelectorAll('[id^="page-"]').forEach(x=>x.style.display='none');document.getElementById('page-'+p).style.display='block';document.querySelectorAll('.sidebar a').forEach(x=>x.classList.remove('active'));document.getElementById('nav-'+p).classList.add('active');if(p==='workorders')renderWorkorders();if(p==='dashboard')renderDashboard();if(p==='vendors')renderVendors();}
 
 checkLogin();
