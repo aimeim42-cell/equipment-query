@@ -444,7 +444,7 @@ function renderWorkorders(){
     document.querySelector('#workorder-table tbody').innerHTML=pageData.map(o=>{
         const ct = new Date(o.createTime);
         const desc = (o.desc || '').substring(0, 12);
-        return '<tr><td>'+o.id+'</td><td>'+o.dept+'</td><td>'+o.device+'</td><td>'+desc+'</td><td>'+getStatusHtml(o.status)+'</td><td>'+(o.vendor||'-')+'</td><td>'+ct.toLocaleDateString()+'</td></tr>';
+        return '<tr><td>'+o.id+'</td><td>'+o.dept+'</td><td>'+o.device+'</td><td>'+desc+'</td><td><select class="form-select form-select-sm" style="width:80px" onchange="changeStatus('"+o.id+"',this.value)"><option "+(o.status==='响应中'?'selected':'')+">响应中</option><option "+(o.status==='审批中'?'selected':'')+">审批中</option><option "+(o.status==='已完成'?'selected':'')+">已完成</option></select></td><td>'+(o.vendor||'-')+'</td><td>'+ct.toLocaleDateString()+'</td></tr>';
     }).join('');
     
     document.getElementById('page-info').textContent = filtered.length + '条 第' + currentPage + '/' + totalPages + '页';
@@ -482,7 +482,7 @@ function showPendingDetail(t){
     document.querySelector('#pending-table tbody').innerHTML = os.map(o => {
         const ct = new Date(o.createTime);
         const duration = now - ct;
-        return '<tr><td>'+o.id+'</td><td>'+o.dept+'</td><td>'+o.device+'</td><td>'+ct.toLocaleString()+'</td><td>'+formatDuration(duration)+'</td><td>'+getStatusHtml(o.status)+'</td></tr>';
+        return '<tr><td>'+o.id+'</td><td>'+o.dept+'</td><td>'+o.device+'</td><td>'+ct.toLocaleString()+'</td><td>'+formatDuration(duration)+'</td><td><select class="form-select form-select-sm" style="width:80px" onchange="changeStatus('"+o.id+"',this.value)"><option "+(o.status==='响应中'?'selected':'')+">响应中</option><option "+(o.status==='审批中'?'selected':'')+">审批中</option><option "+(o.status==='已完成'?'selected':'')+">已完成</option></select></td></tr>';
     }).join('');
     new bootstrap.Modal(document.getElementById('pendingModal')).show();
 }
