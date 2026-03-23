@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bank Equipment Repair System</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    <style>
+        body { background: #f5f7fa; }
+        .sidebar { min-height: 100vh; background: #2c3e50; color: white; }
+        .sidebar a { color: #ecf0f1; text-decoration: none; padding: 12px 20px; display: block; }
+        .sidebar a:hover, .sidebar a.active { background: #34495e; }
+        .stat-card { border-radius: 10px; padding: 20px; margin-bottom: 20px; }
+        .stat-card h3 { font-size: 2rem; margin: 0; }
+        .table-responsive { background: white; border-radius: 10px; padding: 20px; }
+    </style>
+</head>
+<body>
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-md-2 sidebar p-0">
+            <div class="p-3 text-center border-bottom"><h5><i class="bi bi-bank"></i> OPS Manager</h5></div>
+            <a href="#" onclick="showPage('dashboard')" class="active" id="nav-dashboard"><i class="bi bi-speedometer2"></i> Dashboard</a>
+            <a href="#" onclick="showPage('repair')" id="nav-repair"><i class="bi bi-tools"></i> New Repair</a>
+            <a href="#" onclick="showPage('workorders')" id="nav-workorders"><i class="bi bi-file-earmark-text"></i> Work Orders</a>
+            <a href="#" onclick="showPage('vendors')" id="nav-vendors"><i class="bi bi-people"></i> Vendors</a>
+            <a href="#" onclick="showPage('stats')" id="nav-stats"><i class="bi bi-bar-chart"></i> Statistics</a>
+        </div>
+        
+        <div class="col-md-10 p-4">
+            <div id="page-dashboard">
+                <h4 class="mb-4"><i class="bi bi-speedometer2"></i> Dashboard</h4>
+                <div class="row">
+                    <div class="col-md-3"><div class="stat-card bg-white"><div class="text-muted">Pending</div><h3 class="text-warning" id="stat-pending">0</h3></div></div>
+                    <div class="col-md-3"><div class="stat-card bg-white"><div class="text-muted">Processing</div><h3 class="text-info" id="stat-processing">0</h3></div></div>
+                    <div class="col-md-3"><div class="stat-card bg-white"><div class="text-muted">This Week</div><h3 class="text-primary" id="stat-week">0</h3></div></div>
+                    <div class="col-md-3"><div class="stat-card bg-white"><div class="text-muted">This Month</div><h3 class="text-success" id="stat-month">0</h3></div></div>
+                </div>
+                <div class="table-responsive mt-4">
+                    <h5>Recent Orders</h5>
+                    <table class="table table-hover" id="recent-table"><thead><tr><th>ID</th><th>Dept</th><th>Type</th><th>Status</th><th>Date</th></tr></thead><tbody></tbody></table>
+                </div>
+            </div>
+            
+            <div id="page-repair" style="display:none;">
+                <h4 class="mb-4"><i class="bi bi-tools"></i> New Repair Request</h4>
+                <div class="card">
+                    <div class="card-body">
+                        <form id="repair-form">
+                            <div class="row">
+                                <div class="col-md-6 mb-3"><label class="form-label">Department *</label><input type="text" class="form-control" id="repair-dept" required></div>
+                                <div class="col-md-6 mb-3"><label class="form-label">Address *</label><input type="text" class="form-control" id="repair-address" required></div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6 mb-3"><label class="form-label">Contact Person *</label><input type="text" class="form-control" id="repair-person" required></div>
+                                <div class="col-md-6 mb-3"><label class="form-label">Phone *</label><input type="tel" class="form-control" id="repair-phone" required></div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6 mb-3"><label class="form-label">Equipment Type *</label>
+                                    <select class="form-select" id="repair-type" required>
+                                        <option value="">Select</option>
+                                        <option value="ATM">ATM</option>
+                                        <option value="CDM">CDM (Cash Deposit)</option>
+                                        <option value="LED">LED Display</option>
+                                        <option value="Lightbox">Lightbox</option>
+                                        <option value="AC">Air Conditioner</option>
+                                        <option value="Electric">Electric</option>
+                                        <option value="Safe">Safe/Gun Cabinet</option>
+                                        <option value="Other">Other</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-6 mb-3"><label class="form-label">Issue Description *</label><input type="text" class="form-control" id="repair-desc" required></div>
+                            </div>
+                            <div class="mb-3"><label class="form-label">Photos</label><input type="file" class="form-control" id="repair-photo" accept="image/*" multiple></div>
+                            <button type="submit" class="btn btn-primary"><i class="bi bi-send"></i> Submit</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+            
+            <div id="page-workorders" style="display:none;">
+                <h4 class="mb-4"><i class="bi bi-file-earmark-text"></i> Work Orders</h4>
+                <div class="d-flex gap-2 mb-3">
+                    <button class="btn btn-outline-secondary" onclick="filterStatus('all')">All</button>
+                    <button class="btn btn-outline-warning" onclick="filterStatus('Pending')">Pending</button>
+                    <button class="btn btn-outline-info" onclick="filterStatus('Processing')">Processing</button>
+                    <button class="btn btn-outline-success" onclick="filterStatus('Completed')">Completed</button>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-hover" id="workorder-table">
+                        <thead><tr><th>ID</th><th>Dept</th><th>Type</th><th>Issue</th><th>Status</th><th>Vendor</th><th>Created</th><th>Action</th></tr></thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+            
+            <div id="page-vendors" style="display:none;">
+                <h4 class="mb-4"><i class="bi bi-people"></i> Vendor Info</h4>
+                <div class="table-responsive">
+                    <table class="table table-hover" id="vendor-table">
+                        <thead><tr><th>Type</th><th>Brand</th><th>Vendor</th><th>Contact</th><th>Phone</th><th>Note</th></tr></thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+            
+            <div id="page-stats" style="display:none;">
+                <h4 class="mb-4"><i class="bi bi-bar-chart"></i> Statistics</h4>
+                <div class="row">
+                    <div class="col-md-6"><div class="card mb-4"><div class="card-body"><h5>Weekly Stats</h5><canvas id="chart-week"></canvas></div></div></div>
+                    <div class="col-md-6"><div class="card mb-4"><div class="card-body"><h5>By Type</h5><canvas id="chart-type"></canvas></div></div></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+const vendors = [
+    {type:'ATM', brand:'GRG', vendor:'Guangxi Jieming', contact:'Dehou', phone:'18176258161', note:'GRG APP'},
+    {type:'ATM', brand:'HYC', vendor:'Guilin Tianyou', contact:'Taihua', phone:'19977160868'},
+    {type:'CDM', brand:'GRG', vendor:'Guangxi Jieming', contact:'Dehou', phone:'18176258161'},
+    {type:'LED', brand:'Lenovo', vendor:'Guilin Yinsheng', contact:'Li Jin', phone:'13977300868', note:'WeChat Group'},
+    {type:'Lightbox', brand:'-', vendor:'Guilin Yinyuan', contact:'Chen Xinguang', phone:'19077160868'},
+    {type:'AC', brand:'-', vendor:'Wuxing Electric', contact:'Mr Mo', phone:'13457271088'},
+    {type:'Safe', brand:'-', vendor:'Guilin Andun', contact:'Ou Wei', phone:'18178368361'},
+];
+
+let workorders = JSON.parse(localStorage.getItem('workorders') || '[]');
+
+function saveWorkorders() {
+    localStorage.setItem('workorders', JSON.stringify(workorders));
+    renderDashboard();
+    renderWorkorders();
+}
+
+function getVendor(type) {
+    const map = {ATM:'Guangxi Jieming', CDM:'Guangxi Jieming', LED:'Guilin Yinsheng', Lightbox:'Guilin Yinyuan', AC:'Wuxing Electric', Electric:'Guilin Yinke', Safe:'Guilin Andun'};
+    return map[type] || 'TBD';
+}
+
+function generateOrderNo() {
+    const now = new Date();
+    return 'WO' + now.getFullYear() + String(now.getMonth()+1).padStart(2,'0') + String(now.getDate()).padStart(2,'0') + String(workorders.length+1).padStart(4,'0');
+}
+
+document.getElementById('repair-form').addEventListener('submit', function(e) {
+    e.preventDefault();
+    const order = {
+        id: generateOrderNo(),
+        dept: document.getElementById('repair-dept').value,
+        address: document.getElementById('repair-address').value,
+        person: document.getElementById('repair-person').value,
+        phone: document.getElementById('repair-phone').value,
+        type: document.getElementById('repair-type').value,
+        desc: document.getElementById('repair-desc').value,
+        photos: [],
+        status: 'Pending',
+        vendor: getVendor(document.getElementById('repair-type').value),
+        createTime: new Date().toISOString(),
+        updateTime: new Date().toISOString(),
+        remark: ''
+    };
+    workorders.unshift(order);
+    saveWorkorders();
+    alert('Submitted! Order ID: ' + order.id);
+    this.reset();
+    showPage('workorders');
+});
+
+function renderDashboard() {
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const weekAgo = new Date(today.getTime() - 7*24*60*60*1000);
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+    
+    const pending = workorders.filter(o => o.status === 'Pending').length;
+    const processing = workorders.filter(o => o.status === 'Processing').length;
+    const week = workorders.filter(o => new Date(o.createTime) >= weekAgo).length;
+    const month = workorders.filter(o => o.status === 'Completed' && new Date(o.updateTime) >= monthStart).length;
+    
+    document.getElementById('stat-pending').textContent = pending;
+    document.getElementById('stat-processing').textContent = processing;
+    document.getElementById('stat-week').textContent = week;
+    document.getElementById('stat-month').textContent = month;
+    
+    document.querySelector('#recent-table tbody').innerHTML = workorders.slice(0, 5).map(o => `<tr><td>${o.id}</td><td>${o.dept}</td><td>${o.type}</td><td><span class="badge bg-${o.status==='Pending'?'warning':o.status==='Processing'?'info':'success'}">${o.status}</span></td><td>${new Date(o.createTime).toLocaleDateString()}</td></tr>`).join('');
+}
+
+function renderWorkorders(filter = 'all') {
+    let filtered = filter === 'all' ? workorders : workorders.filter(o => o.status === filter);
+    document.querySelector('#workorder-table tbody').innerHTML = filtered.map(o => `<tr><td>${o.id}</td><td>${o.dept}</td><td>${o.type}</td><td>${o.desc}</td><td><span class="badge bg-${o.status==='Pending'?'warning':o.status==='Processing'?'info':'success'}">${o.status}</span></td><td>${o.vendor}</td><td>${new Date(o.createTime).toLocaleString()}</td><td><button class="btn btn-sm btn-success" onclick="updateStatus('${o.id}')">Process</button></td></tr>`).join('');
+}
+
+function filterStatus(status) { renderWorkorders(status); }
+
+function updateStatus(id) {
+    const order = workorders.find(o => o.id === id);
+    if (!order) return;
+    const next = order.status === 'Pending' ? 'Processing' : 'Completed';
+    if (confirm('Change status to "' + next + '"?')) {
+        order.status = next;
+        order.updateTime = new Date().toISOString();
+        saveWorkorders();
+    }
+}
+
+function renderVendors() {
+    document.querySelector('#vendor-table tbody').innerHTML = vendors.map(v => `<tr><td>${v.type}</td><td>${v.brand}</td><td>${v.vendor}</td><td>${v.contact}</td><td>${v.phone}</td><td>${v.note||''}</td></tr>`).join('');
+}
+
+function showPage(page) {
+    document.querySelectorAll('[id^="page-"]').forEach(p => p.style.display = 'none');
+    document.getElementById('page-' + page).style.display = 'block';
+    document.querySelectorAll('.sidebar a').forEach(a => a.classList.remove('active'));
+    document.getElementById('nav-' + page).classList.add('active');
+    if (page === 'dashboard') renderDashboard();
+    if (page === 'workorders') renderWorkorders();
+    if (page === 'vendors') renderVendors();
+}
+
+renderDashboard();
+renderVendors();
+</script>
+</body>
+</html>
