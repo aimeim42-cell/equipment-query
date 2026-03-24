@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>银行设备报修</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body { background: #f0f2f5; padding: 20px; }
+        .form-card { max-width: 500px; margin: 0 auto; background: white; border-radius: 10px; padding: 25px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        .logo { text-align: center; margin-bottom: 20px; }
+        .logo h4 { color: #1e3a5f; }
+    </style>
+</head>
+<body>
+    <div class="form-card">
+        <div class="logo">
+            <h4>🏦 银行设备报修</h4>
+            <p class="text-muted">请填写以下信息，我们将尽快为您处理</p>
+        </div>
+        
+        <form id="repair-form">
+            <div class="mb-3">
+                <label class="form-label">报修部门 *</label>
+                <input type="text" class="form-control" id="repair-dept" placeholder="如：武鸣狮山路小微支行" required>
+            </div>
+            
+            <div class="mb-3">
+                <label class="form-label">地址 *</label>
+                <input type="text" class="form-control" id="repair-address" placeholder="如：南宁市武鸣区狮山路6号桂林银行" required>
+            </div>
+            
+            <div class="row">
+                <div class="col-6 mb-3">
+                    <label class="form-label">报修人 *</label>
+                    <input type="text" class="form-control" id="repair-person" required>
+                </div>
+                <div class="col-6 mb-3">
+                    <label class="form-label">联系电话 *</label>
+                    <input type="tel" class="form-control" id="repair-phone" required>
+                </div>
+            </div>
+            
+            <div class="mb-3">
+                <label class="form-label">设备类型 *</label>
+                <select class="form-select" id="repair-type" required>
+                    <option value="">请选择</option>
+                    <option value="ATM/取款机">ATM/取款机</option>
+                    <option value="存取款一体机">存取款一体机</option>
+                    <option value="LED显示屏">LED显示屏/灯箱</option>
+                    <option value="门头灯箱">门头灯箱</option>
+                    <option value="空调">空调</option>
+                    <option value="电器维修">电器维修</option>
+                    <option value="保险柜/枪柜">保险柜/枪柜</option>
+                    <option value="其他">其他</option>
+                </select>
+            </div>
+            
+            <div class="mb-3">
+                <label class="form-label">故障描述 *</label>
+                <textarea class="form-control" id="repair-desc" rows="3" placeholder="请描述具体故障情况" required></textarea>
+            </div>
+            
+            <div class="mb-3">
+                <label class="form-label">故障照片（可上传多张）</label>
+                <input type="file" class="form-control" id="repair-photo" accept="image/*" multiple>
+            </div>
+            
+            <button type="submit" class="btn btn-primary w-100">提交报修</button>
+        </form>
+        
+        <div id="success-msg" class="alert alert-success mt-3" style="display:none;">
+            <h5>✅ 报修提交成功！</h5>
+            <p>工单号：<strong id="order-id"></strong></p>
+            <p class="text-muted">请保持电话畅通，运维人员将与您联系</p>
+        </div>
+    </div>
+
+<script>
+// 读取现有工单
+let workorders = JSON.parse(localStorage.getItem('workorders') || '[]');
+
+// 生成工单号
+function generateOrderNo() {
+    const now = new Date();
+    return 'WO' + now.getFullYear() + String(now.getMonth()+1).padStart(2,'0') + 
+           String(now.getDate()).padStart(2,'0') + String(workorders.length+1).padStart(4,'0');
+}
+
+// 运维商映射
+const vendorMap = {
+    'ATM/取款机': '广西捷铭机电/桂林天佑科技',
+    '存取款一体机': '广西捷铭机电/桂林天佑科技',
+    'LED显示屏': '桂林银盛电子',
+    '门头灯箱': '桂林银源光电',
+    '空调': '五星电器维修/桂林银科空调',
+    '电器维修': '桂林银科空调',
+    '保险柜/枪柜': '桂林安盾技防',
+    '其他': '待分配'
+};
+
+// 提交表单
+document.getElementById('repair-form').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const order = {
+        id: generateOrderNo(),
+        dept: document.getElementById('repair-dept').value,
+        address: document.getElementById('repair-address').value,
+        person: document.getElementById('repair-person').value,
+        phone: document.getElementById('repair-phone').value,
+        type: document.getElementById('repair-type').value,
+        desc: document.getElementById('repair-desc').value,
+        photos: [], // 实际需要上传到服务器
+        status: '待处理',
+        vendor: vendorMap[document.getElementById('repair-type').value] || '待分配',
+        createTime: new Date().toISOString()
+    };
+    
+    workorders.unshift(order);
+    localStorage.setItem('workorders', JSON.stringify(workorders));
+    
+    document.getElementById('repair-form').style.display = 'none';
+    document.getElementById('success-msg').style.display = 'block';
+    document.getElementById('order-id').textContent = order.id;
+});
+</script>
+</body>
+</html>

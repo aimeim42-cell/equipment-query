@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Work Order Status</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>body { background: #f0f2f5; padding: 20px; }</style>
+</head>
+<body>
+    <div class="container">
+        <h4 class="text-center mt-4">Work Order Status</h4>
+        <div class="search-box" style="max-width:400px;margin:30px auto;">
+            <div class="input-group">
+                <input type="text" class="form-control" id="order-search" placeholder="Order ID (e.g. WO202603230001)">
+                <button class="btn btn-primary" onclick="searchOrder()">Search</button>
+            </div>
+        </div>
+        <div id="result" class="card mt-4" style="display:none;">
+            <div class="card-body">
+                <p><strong>Order ID:</strong> <span id="result-id"></span></p>
+                <p><strong>Issue:</strong> <span id="result-desc"></span></p>
+                <p><strong>Status:</strong> <span id="result-status" class="badge"></span></p>
+                <p><strong>Vendor:</strong> <span id="result-vendor"></span></p>
+                <p><strong>Created:</strong> <span id="result-time"></span></p>
+            </div>
+        </div>
+    </div>
+<script>
+function searchOrder() {
+    const id = document.getElementById('order-search').value.trim();
+    const workorders = JSON.parse(localStorage.getItem('workorders') || '[]');
+    const order = workorders.find(o => o.id === id);
+    const result = document.getElementById('result');
+    if (!order) {
+        result.style.display = 'block';
+        result.innerHTML = '<div class="alert alert-warning">Order not found</div>';
+        return;
+    }
+    const statusClass = order.status === 'Pending' ? 'bg-warning' : order.status === 'Processing' ? 'bg-info' : 'bg-success';
+    result.style.display = 'block';
+    result.innerHTML = `<div class="card-body"><p><strong>Order ID:</strong>${order.id}</p><p><strong>Issue:</strong>${order.desc}</p><p><strong>Status:</strong><span class="badge ${statusClass}">${order.status}</span></p><p><strong>Vendor:</strong>${order.vendor}</p><p><strong>Created:</strong>${new Date(order.createTime).toLocaleString()}</p></div>`;
+}
+</script>
+</body>
+</html>

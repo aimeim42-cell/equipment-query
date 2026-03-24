@@ -1,0 +1,5 @@
+﻿Disabled HKCU Run entries backed up under: HKCU:Software\OpenClaw\DisabledRunBackup
+Disabled tasks (best-effort):
+\\Adobe Acrobat Update Task, \\Adobe Flash Player Updater, \\Java Update Scheduler, \\Apple\\AppleSoftwareUpdate, \\Microsoft\\Office\\Office Automatic Updates, \\Microsoft\\Office\\OfficeTelemetryAgentFallBack
+Storage Sense enabled (AllowStorageSenseGlobal=1, StoragePolicy01=1)
+VisualFXSetting set to2 (performance)

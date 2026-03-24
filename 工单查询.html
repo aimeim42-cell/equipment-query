@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>工单进度查询</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body { background: #f0f2f5; padding: 20px; }
+        .search-box { max-width: 400px; margin: 30px auto; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h4 class="text-center mt-4">🔍 工单进度查询</h4>
+        
+        <div class="search-box">
+            <div class="input-group">
+                <input type="text" class="form-control" id="order-search" placeholder="请输入工单号（如WO202603230001）">
+                <button class="btn btn-primary" onclick="searchOrder()">查询</button>
+            </div>
+        </div>
+        
+        <div id="result" class="card mt-4" style="display:none;">
+            <div class="card-body">
+                <h5 class="card-title">工单状态</h5>
+                <p><strong>工单号：</strong><span id="result-id"></span></p>
+                <p><strong>报修内容：</strong><span id="result-desc"></span></p>
+                <p><strong>当前状态：</strong><span id="result-status" class="badge"></span></p>
+                <p><strong>处理人员：</strong><span id="result-vendor"></span></p>
+                <p><strong>创建时间：</strong><span id="result-time"></span></p>
+            </div>
+        </div>
+    </div>
+
+<script>
+function searchOrder() {
+    const id = document.getElementById('order-search').value.trim();
+    const workorders = JSON.parse(localStorage.getItem('workorders') || '[]');
+    const order = workorders.find(o => o.id === id);
+    
+    const result = document.getElementById('result');
+    if (!order) {
+        result.style.display = 'block';
+        result.innerHTML = '<div class="alert alert-warning">未找到该工单，请检查工单号是否正确</div>';
+        return;
+    }
+    
+    const statusClass = order.status === '待处理' ? 'bg-warning' : order.status === '处理中' ? 'bg-info' : 'bg-success';
+    
+    result.style.display = 'block';
+    result.innerHTML = `
+        <div class="card-body">
+            <h5 class="card-title">工单状态</h5>
+            <p><strong>工单号：</strong>${order.id}</p>
+            <p><strong>报修内容：</strong>${order.desc}</p>
+            <p><strong>当前状态：</strong><span class="badge ${statusClass}">${order.status}</span></p>
+            <p><strong>处理人员：</strong>${order.vendor}</p>
+            <p><strong>创建时间：</strong>${new Date(order.createTime).toLocaleString()}</p>
+        </div>
+    `;
+}
+</script>
+</body>
+</html>

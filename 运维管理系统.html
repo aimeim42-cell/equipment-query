@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>银行设备运维管理系统</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    <style>
+        body { background: #f5f7fa; }
+        .sidebar { min-height: 100vh; background: #2c3e50; color: white; }
+        .sidebar a { color: #ecf0f1; text-decoration: none; padding: 12px 20px; display: block; }
+        .sidebar a:hover, .sidebar a.active { background: #34495e; }
+        .stat-card { border-radius: 10px; padding: 20px; margin-bottom: 20px; }
+        .stat-card h3 { font-size: 2rem; margin: 0; }
+        .status-待处理 { background: #ffeaa7; color: #d63031; }
+        .status-处理中 { background: #74b9ff; color: #0984e3; }
+        .status-已完成 { background: #55efc4; color: #00b894; }
+        .table-responsive { background: white; border-radius: 10px; padding: 20px; }
+    </style>
+</head>
+<body>
+<div class="container-fluid">
+    <div class="row">
+        <!-- 侧边栏 -->
+        <div class="col-md-2 sidebar p-0">
+            <div class="p-3 text-center border-bottom">
+                <h5><i class="bi bi-bank"></i> 运维管理</h5>
+            </div>
+            <a href="#" onclick="showPage('dashboard')" class="active" id="nav-dashboard"><i class="bi bi-speedometer2"></i> 数据看板</a>
+            <a href="#" onclick="showPage('repair')" id="nav-repair"><i class="bi bi-tools"></i> 报修登记</a>
+            <a href="#" onclick="showPage('workorders')" id="nav-workorders"><i class="bi bi-file-earmark-text"></i> 工单管理</a>
+            <a href="#" onclick="showPage('vendors')" id="nav-vendors"><i class="bi bi-people"></i> 运维商</a>
+            <a href="#" onclick="showPage('stats')" id="nav-stats"><i class="bi bi-bar-chart"></i> 统计分析</a>
+        </div>
+        
+        <!-- 主内容区 -->
+        <div class="col-md-10 p-4">
+            
+            <!-- 数据看板 -->
+            <div id="page-dashboard">
+                <h4 class="mb-4"><i class="bi bi-speedometer2"></i> 数据看板</h4>
+                <div class="row">
+                    <div class="col-md-3">
+                        <div class="stat-card bg-white">
+                            <div class="text-muted">待处理</div>
+                            <h3 class="text-warning" id="stat-待处理">0</h3>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="stat-card bg-white">
+                            <div class="text-muted">处理中</div>
+                            <h3 class="text-info" id="stat-处理中">0</h3>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="stat-card bg-white">
+                            <div class="text-muted">本周新增</div>
+                            <h3 class="text-primary" id="stat-本周新增">0</h3>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="stat-card bg-white">
+                            <div class="text-muted">本月完成</div>
+                            <h3 class="text-success" id="stat-本月完成">0</h3>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="row mt-4">
+                    <div class="col-md-6">
+                        <div class="table-responsive">
+                            <h5>最近工单</h5>
+                            <table class="table table-hover" id="recent-orders">
+                                <thead><tr><th>单号</th><th>网点</th><th>设备类型</th><th>状态</th><th>时间</th></tr></thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="table-responsive">
+                            <h5>设备类型分布</h5>
+                            <canvas id="chart-type"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 报修登记 -->
+            <div id="page-repair" style="display:none;">
+                <h4 class="mb-4"><i class="bi bi-tools"></i> 报修登记</h4>
+                <div class="card">
+                    <div class="card-body">
+                        <form id="repair-form">
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">报修部门 *</label>
+                                    <input type="text" class="form-control" id="repair-dept" required>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">地址 *</label>
+                                    <input type="text" class="form-control" id="repair-address" required>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">报修人 *</label>
+                                    <input type="text" class="form-control" id="repair-person" required>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">联系电话 *</label>
+                                    <input type="tel" class="form-control" id="repair-phone" required>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">设备类型 *</label>
+                                    <select class="form-select" id="repair-type" required>
+                                        <option value="">请选择设备类型</option>
+                                        <option value="ATM/取款机">ATM/取款机</option>
+                                        <option value="存取款一体机">存取款一体机</option>
+                                        <option value="LED显示屏">LED显示屏/灯箱</option>
+                                        <option value="门头灯箱">门头灯箱</option>
+                                        <option value="空调">空调</option>
+                                        <option value="电器维修">电器维修</option>
+                                        <option value="保险柜/枪柜">保险柜/枪柜</option>
+                                        <option value="其他">其他</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">故障描述 *</label>
+                                    <input type="text" class="form-control" id="repair-desc" required>
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">故障照片</label>
+                                <input type="file" class="form-control" id="repair-photo" accept="image/*" multiple>
+                            </div>
+                            <button type="submit" class="btn btn-primary"><i class="bi bi-send"></i> 提交报修</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 工单管理 -->
+            <div id="page-workorders" style="display:none;">
+                <h4 class="mb-4"><i class="bi bi-file-earmark-text"></i> 工单管理</h4>
+                <div class="d-flex gap-2 mb-3">
+                    <button class="btn btn-outline-secondary" onclick="filterStatus('all')">全部</button>
+                    <button class="btn btn-outline-warning" onclick="filterStatus('待处理')">待处理</button>
+                    <button class="btn btn-outline-info" onclick="filterStatus('处理中')">处理中</button>
+                    <button class="btn btn-outline-success" onclick="filterStatus('已完成')">已完成</button>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-hover" id="workorder-table">
+                        <thead>
+                            <tr>
+                                <th>工单号</th>
+                                <th>报修部门</th>
+                                <th>设备类型</th>
+                                <th>故障描述</th>
+                                <th>状态</th>
+                                <th>运维商</th>
+                                <th>创建时间</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+            
+            <!-- 运维商管理 -->
+            <div id="page-vendors" style="display:none;">
+                <h4 class="mb-4"><i class="bi bi-people"></i> 运维商信息</h4>
+                <div class="table-responsive">
+                    <table class="table table-hover" id="vendor-table">
+                        <thead>
+                            <tr>
+                                <th>设备类型</th>
+                                <th>品牌</th>
+                                <th>运维商</th>
+                                <th>联系人</th>
+                                <th>联系电话</th>
+                                <th>备注</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+            
+            <!-- 统计分析 -->
+            <div id="page-stats" style="display:none;">
+                <h4 class="mb-4"><i class="bi bi-bar-chart"></i> 统计分析</h4>
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="card mb-4">
+                            <div class="card-body">
+                                <h5>本周工单统计</h5>
+                                <canvas id="chart-week"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="card mb-4">
+                            <div class="card-body">
+                                <h5>设备类型分布</h5>
+                                <canvas id="chart-type2"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+        </div>
+    </div>
+</div>
+
+<!-- 工单详情Modal -->
+<div class="modal fade" id="orderModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">工单详情</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="order-detail"></div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">关闭</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+// 初始化数据
+const vendors = [
+    {类型:'ATM/取款机', 品牌:'广电运通', 运维商:'广西捷铭机电', 联系人:'德厚', 电话:'18176258161', 备注:'广电运通APP维修'},
+    {类型:'ATM/取款机', 品牌:'恒银', 运维商:'桂林天佑科技', 联系人:'泰华', 电话:'19977160868'},
+    {类型:'ATM/取款机', 品牌:'OKI', 运维商:'广西捷铭机电', 联系人:'德厚', 电话:'18176258161'},
+    {类型:'存取款一体机', 品牌:'广电运通', 运维商:'广西捷铭机电', 联系人:'德厚', 电话:'18176258161'},
+    {类型:'存取款一体机', 品牌:'恒银', 运维商:'桂林天佑科技', 联系人:'泰华', 电话:'19977160868'},
+    {类型:'存取款一体机', 品牌:'OKI', 运维商:'广西捷铭机电', 联系人:'德厚', 电话:'18176258161'},
+    {类型:'存取款一体机', 品牌:'兴业', 运维商:'广西捷铭机电', 联系人:'德厚', 电话:'18176258161'},
+    {类型:'LED显示屏/灯箱', 品牌:'联想', 运维商:'桂林银盛电子', 联系人:'黎进', 电话:'13977300868', 备注:'有维修群'},
+    {类型:'门头灯箱', 品牌:'/ ', 运维商:'桂林银源光电', 联系人:'陈新光', 电话:'19077160868'},
+    {类型:'空调', 品牌:'/', 运维商:'五星电器维修', 联系人:'莫先生', 电话:'13457271088'},
+    {类型:'电器维修', 品牌:'/', 运维商:'桂林银科空调', 联系人:'莫生', 电话:'18278398618'},
+    {类型:'保险柜/枪柜', 品牌:'/', 运维商:'桂林安盾技防', 联系人:'欧卫', 电话:'18178368361'},
+    {类型:'智能柜/排队机', 品牌:'/', 运维商:'桂林银科空调', 联系人:'莫生', 电话:'18278398618'},
+    {类型:'移动营/监控/GPS', 品牌:'华为/中兴/海康', 运维商:'广西移动通信', 联系人:'/ ', 电话:'', 备注:'有维修群'},
+];
+
+// 加载数据
+let workorders = JSON.parse(localStorage.getItem('workorders') || '[]');
+
+// 保存工单
+function saveWorkorders() {
+    localStorage.setItem('workorders', JSON.stringify(workorders));
+    renderDashboard();
+    renderWorkorders();
+}
+
+// 获取运维商
+function getVendor(type) {
+    const v = vendors.find(x => x.类型 === type);
+    return v ? v.运维商 : '待分配';
+}
+
+// 生成工单号
+function generateOrderNo() {
+    const now = new Date();
+    return 'WO' + now.getFullYear() + String(now.getMonth()+1).padStart(2,'0') + 
+           String(now.getDate()).padStart(2,'0') + String(workorders.length+1).padStart(4,'0');
+}
+
+// 提交报修
+document.getElementById('repair-form').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const order = {
+        id: generateOrderNo(),
+        dept: document.getElementById('repair-dept').value,
+        address: document.getElementById('repair-address').value,
+        person: document.getElementById('repair-person').value,
+        phone: document.getElementById('repair-phone').value,
+        type: document.getElementById('repair-type').value,
+        desc: document.getElementById('repair-desc').value,
+        photos: [], // 照片需要上传到服务器
+        status: '待处理',
+        vendor: getVendor(document.getElementById('repair-type').value),
+        createTime: new Date().toISOString(),
+        updateTime: new Date().toISOString(),
+        remark: ''
+    };
+    
+    workorders.unshift(order);
+    saveWorkorders();
+    
+    alert('报修提交成功！工单号：' + order.id);
+    this.reset();
+    showPage('workorders');
+});
+
+// 渲染数据看板
+function renderDashboard() {
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const weekAgo = new Date(today.getTime() - 7*24*60*60*1000);
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+    
+    const 待处理 = workorders.filter(o => o.status === '待处理').length;
+    const 处理中 = workorders.filter(o => o.status === '处理中').length;
+    const 本周新增 = workorders.filter(o => new Date(o.createTime) >= weekAgo).length;
+    const 本月完成 = workorders.filter(o => o.status === '已完成' && new Date(o.updateTime) >= monthStart).length;
+    
+    document.getElementById('stat-待处理').textContent = 待处理;
+    document.getElementById('stat-处理中').textContent = 处理中;
+    document.getElementById('stat-本周新增').textContent = 本周新增;
+    document.getElementById('stat-本月完成').textContent = 本月完成;
+    
+    // 最近工单
+    const tbody = document.querySelector('#recent-orders tbody');
+    tbody.innerHTML = workorders.slice(0, 5).map(o => `
+        <tr>
+            <td>${o.id}</td>
+            <td>${o.dept}</td>
+            <td>${o.type}</td>
+            <td><span class="badge bg-${o.status==='待处理'?'warning':o.status==='处理中'?'info':'success'}">${o.status}</span></td>
+            <td>${new Date(o.createTime).toLocaleDateString()}</td>
+        </tr>
+    `).join('');
+}
+
+// 渲染工单列表
+function renderWorkorders(filter = 'all') {
+    const tbody = document.querySelector('#workorder-table tbody');
+    let filtered = filter === 'all' ? workorders : workorders.filter(o => o.status === filter);
+    
+    tbody.innerHTML = filtered.map(o => `
+        <tr>
+            <td>${o.id}</td>
+            <td>${o.dept}</td>
+            <td>${o.type}</td>
+            <td>${o.desc}</td>
+            <td><span class="badge bg-${o.status==='待处理'?'warning':o.status==='处理中'?'info':'success'}">${o.status}</span></td>
+            <td>${o.vendor}</td>
+            <td>${new Date(o.createTime).toLocaleString()}</td>
+            <td>
+                <button class="btn btn-sm btn-primary" onclick="viewOrder('${o.id}')">查看</button>
+                <button class="btn btn-sm btn-success" onclick="updateStatus('${o.id}')">处理</button>
+            </td>
+        </tr>
+    `).join('');
+}
+
+// 筛选状态
+function filterStatus(status) {
+    renderWorkorders(status);
+}
+
+// 查看工单
+function viewOrder(id) {
+    const order = workorders.find(o => o.id === id);
+    if (!order) return;
+    
+    const modal = new bootstrap.Modal(document.getElementById('orderModal'));
+    document.getElementById('order-detail').innerHTML = `
+        <p><strong>工单号：</strong>${order.id}</p>
+        <p><strong>报修部门：</strong>${order.dept}</p>
+        <p><strong>地址：</strong>${order.address}</p>
+        <p><strong>报修人：</strong>${order.person} (${order.phone})</p>
+        <p><strong>设备类型：</strong>${order.type}</p>
+        <p><strong>故障描述：</strong>${order.desc}</p>
+        <p><strong>状态：</strong>${order.status}</p>
+        <p><strong>运维商：</strong>${order.vendor}</p>
+        <p><strong>创建时间：</strong>${new Date(order.createTime).toLocaleString()}</p>
+        <hr>
+        <div class="mb-3">
+            <label class="form-label">备注</label>
+            <textarea class="form-control" id="order-remark">${order.remark || ''}</textarea>
+        </div>
+    `;
+    document.getElementById('order-remark').addEventListener('change', function() {
+        order.remark = this.value;
+        order.updateTime = new Date().toISOString();
+        saveWorkorders();
+    });
+    modal.show();
+}
+
+// 更新状态
+function updateStatus(id) {
+    const order = workorders.find(o => o.id === id);
+    if (!order) return;
+    
+    const nextStatus = order.status === '待处理' ? '处理中' : '已完成';
+    if (confirm(`确认将工单状态改为"${nextStatus}"？`)) {
+        order.status = nextStatus;
+        order.updateTime = new Date().toISOString();
+        saveWorkorders();
+    }
+}
+
+// 渲染运维商
+function renderVendors() {
+    const tbody = document.querySelector('#vendor-table tbody');
+    tbody.innerHTML = vendors.map(v => `
+        <tr>
+            <td>${v.类型}</td>
+            <td>${v.品牌}</td>
+            <td>${v.运维商}</td>
+            <td>${v.联系人}</td>
+            <td>${v.电话}</td>
+            <td>${v.备注 || ''}</td>
+        </tr>
+    `).join('');
+}
+
+// 页面切换
+function showPage(page) {
+    document.querySelectorAll('[id^="page-"]').forEach(p => p.style.display = 'none');
+    document.getElementById('page-' + page).style.display = 'block';
+    
+    document.querySelectorAll('.sidebar a').forEach(a => a.classList.remove('active'));
+    document.getElementById('nav-' + page).classList.add('active');
+    
+    if (page === 'dashboard') renderDashboard();
+    if (page === 'workorders') renderWorkorders();
+    if (page === 'vendors') renderVendors();
+}
+
+// 初始化
+renderDashboard();
+renderVendors();
+</script>
+</body>
+</html>

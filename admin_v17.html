@@ -115,12 +115,13 @@
             </div>
             <div class="card mb-2">
                 <div class="card-body p-2">
-                    <div class="d-flex gap-1 mb-2">
-                        <input class="form-control form-control-sm" id="search-order" placeholder="鎼滅储鏈烘瀯..." style="max-width:150px" placeholder="馃攳 鎼滅储鏈烘瀯...">
+                    <div class="d-flex gap-1 mb-1">
+                        <input class="form-control form-control-sm" id="search-order" placeholder="馃攳 鎼滅储鏈烘瀯...">
                         <input type="date" class="form-control form-control-sm" id="search-date-start">
                         <input type="date" class="form-control form-control-sm" id="search-date-end">
-                        <input type="date" class="form-control form-control-sm" id="search-date-end">
-                        <button class="btn btn-primary btn-sm" onclick="renderWorkorders()">鏌ヨ</button>
+                    </div>
+                    <div class="d-flex gap-1">
+                        <button class="btn btn-primary btn-sm flex-fill" onclick="renderWorkorders()">鏌ヨ</button>
                     </div>
                 </div>
             </div>
@@ -154,8 +155,8 @@
                 </div>
             </div>
             <div class="row">
-                <div class="col-12 col-md-6 mb-2"><div class="card"><div class="card-body p-2"><h6>馃彚 渚涘簲鍟嗗伐鍗曞垎甯?/h6><div class="chart-container"><canvas id="chart-vendor" width="400" height="220"></canvas></div></div></div></div>
-                <div class="col-12 col-md-6 mb-2"><div class="card"><div class="card-body p-2"><h6>鈴憋笍 渚涘簲鍟嗗搷搴旀椂闀?/h6><div class="chart-container"><canvas id="chart-response" width="400" height="220"></canvas></div></div></div></div>
+                <div class="col-12 col-md-6 mb-2"><div class="card"><div class="card-body p-2"><h6>馃彚 渚涘簲鍟嗗伐鍗曞垎甯?/h6><div class="chart-container"><canvas id="chart-vendor"></canvas></div></div></div></div>
+                <div class="col-12 col-md-6 mb-2"><div class="card"><div class="card-body p-2"><h6>鈴憋笍 渚涘簲鍟嗗搷搴旀椂闀?/h6><div class="chart-container"><canvas id="chart-response"></canvas></div></div></div></div>
             </div>
         </div>
         <div id="page-vendors" style="display:none;">
@@ -225,160 +226,7 @@
 <div class="modal fade" id="pendingModal"><div class="modal-dialog"><div class="modal-content"><div class="modal-header"><h6 class="modal-title" id="pendingModalTitle"></h6><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body"><table class="table table-sm" id="pending-table"><thead><tr><th>宸ュ崟鍙?/th><th>鏈烘瀯</th><th>璁惧</th><th>鏁呴殰</th><th>鎶ヤ慨鏃堕棿</th><th>鏃堕暱</th><th>鐘舵€?/th></tr></thead><tbody></tbody></table></div></div></div></div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/chart.js">
-
-// 运维商"其他"设备类型：切换设备类型时自动更新状态选项
-function handleDeviceTypeChange(deviceType) {
-    var statusSelect = document.getElementById('edit-status');
-    if (!statusSelect) return;
-    var u = getCurrentUser();
-    var isVendorOther = (u && u.role === 'vendor' && deviceType === '其他');
-    var opts = statusSelect.options;
-    for (var i = 0; i < opts.length; i++) {
-        if (isVendorOther && opts[i].value === '待分配') {
-            opts[i].text = '其他';
-            opts[i].value = '其他';
-            if (statusSelect.value === '待分配') statusSelect.value = '其他';
-        } else if (opts[i].value === '其他') {
-            opts[i].text = '待分配';
-            opts[i].value = '待分配';
-        }
-    }
-}
-
-// 增强generateWorkorder：运维商"其他"类型时自动设置vendor为当前用户
-var _origGenerateWorkorder = generateWorkorder;
-generateWorkorder = function() {
-    var u = getCurrentUser();
-    var vendor = document.getElementById('edit-vendor').value;
-    var device = document.getElementById('edit-device-type').value;
-    var dept = document.getElementById('edit-dept').value;
-    var desc = document.getElementById('edit-desc').value;
-    var status = document.getElementById('edit-status').value;
-    if (u && u.role === 'vendor' && device === '其他') { vendor = u.username; }
-    if (!dept || !device) { alert('请填写完整信息'); return; }
-    var now = new Date();
-    var id = 'WO' + now.getFullYear() + String(now.getMonth()+1).padStart(2,'0') + String(now.getDate()).padStart(2,'0') + String(Math.random()).slice(2,6);
-    var o = {
-        id: id, createTime: now.toISOString(), createBy: u ? u.username : 'admin',
-        dept: dept, device: device, vendor: vendor, desc: desc,
-        status: (u && u.role === 'vendor' && device === '其他') ? '其他' : status,
-        responseTime: null, completeTime: null
-    };
-    workorders.push(o);
-    saveWorkorders();
-    renderWorkorders();
-    bootstrap.Modal.getInstance(document.getElementById('generateModal')).hide();
-    alert('工单 ' + id + ' 已生成');
-    document.getElementById('edit-desc').value = '';
-};
-
-// showPage增强：进入生成页面时自动分析工单
-var _origShowPage = showPage;
-showPage = function(page) {
-    _origShowPage(page);
-    if (page === 'generate') {
-        setTimeout(function() { analyzeWorkorder(); }, 100);
-    }
-};
-
-// renderWorkorders增强：供应商角色只看自己的工单
-var _origRenderWorkorders = renderWorkorders;
-renderWorkorders = function() {
-    var u = getCurrentUser();
-    var kw = (document.getElementById('search-order') || {value:''}).value.trim().toLowerCase();
-    var ds = (document.getElementById('search-date-start') || {value:''}).value;
-    var de = (document.getElementById('search-date-end') || {value:''}).value;
-    var list = workorders.filter(function(o) {
-        if (u && u.role === 'vendor' && o.createBy !== u.username) return false;
-        if (kw && o.id.toLowerCase().indexOf(kw) < 0 && (o.dept||'').toLowerCase().indexOf(kw) < 0 && (o.vendor||'').toLowerCase().indexOf(kw) < 0) return false;
-        if (ds && o.createTime < ds) return false;
-        if (de && o.createTime > de + 'T23:59:59') return false;
-        return true;
-    });
-    list.sort(function(a,b){ return new Date(b.createTime) - new Date(a.createTime); });
-    var html = '<table class="table table-sm table-hover mb-0"><thead><tr><th>工单号</th><th>创建时间</th><th>机构</th><th>设备类型</th><th>供应商</th><th>状态</th><th>操作</th></tr></thead><tbody>';
-    if (list.length === 0) {
-        html += '<tr><td colspan="7" class="text-center text-muted py-4">暂无数据</td></tr>';
-    } else {
-        list.forEach(function(o) {
-            html += '<tr>';
-            html += '<td><span class="text-primary fw-bold" style="cursor:pointer" onclick="showOrderDetail(\''+o.id+'\')">'+o.id+'</span></td>';
-            html += '<td>'+new Date(o.createTime).toLocaleString('zh-CN',{hour12:false})+'</td>';
-            html += '<td>'+o.dept+'</td>';
-            html += '<td>'+o.device+'</td>';
-            html += '<td>'+(o.vendor||'')+'</td>';
-            html += '<td>'+getStatusHtml(o.status)+'</td>';
-            html += '<td>';
-            var u2 = getCurrentUser();
-            if ((!u2 || u2.role === 'admin') && o.status !== '已完成') {
-                html += '<button class="btn btn-xs btn-outline-primary me-1" onclick="showChangeStatus(\''+o.id+'\')">改状态</button>';
-            }
-            html += '<button class="btn btn-xs btn-outline-secondary" onclick="showOrderDetail(\''+o.id+'\')">详情</button>';
-            html += '</td></tr>';
-        });
-    }
-    html += '</tbody></table>';
-    document.getElementById('workorder-list').innerHTML = html;
-};
-
-// renderDashboard增强：供应商角色只看自己的数据
-var _origRenderDashboard = renderDashboard;
-renderDashboard = function() {
-    var u = getCurrentUser();
-    var filtered = (u && u.role === 'vendor') ? workorders.filter(function(o){ return o.createBy === u.username; }) : workorders;
-    var now = new Date();
-    var ms = new Date(now.getFullYear(),now.getMonth(),1);
-    var wa = new Date(now.getTime()-7*86400000);
-    var mo = filtered.filter(function(o){ return new Date(o.createTime) >= ms; });
-    var wo = filtered.filter(function(o){ return new Date(o.createTime) >= wa; });
-    document.getElementById('month-total').textContent = mo.length;
-    document.getElementById('month-done').textContent = mo.filter(function(o){ return o.status==='已完成'; }).length;
-    document.getElementById('month-pending').textContent = mo.filter(function(o){ return o.status!=='已完成'; }).length;
-    document.getElementById('week-total').textContent = wo.length;
-    document.getElementById('week-done').textContent = wo.filter(function(o){ return o.status==='已完成'; }).length;
-    document.getElementById('week-pending').textContent = wo.filter(function(o){ return o.status!=='已完成'; }).length;
-    var done = filtered.filter(function(o){ return o.status==='已完成'&&o.completeTime; });
-    if (done.length > 0) {
-        var tot = done.reduce(function(s,o){ return s+(new Date(o.completeTime).getTime()-new Date(o.createTime).getTime()); }, 0);
-        document.getElementById('avg-response').textContent = formatDuration(Math.round(tot/done.length));
-    } else {
-        document.getElementById('avg-response').textContent = '0h';
-    }
-    var vm = {};
-    filtered.forEach(function(o){ var v=o.vendor||'未知'; vm[v]=(vm[v]||0)+1; });
-    var vK = Object.keys(vm), vV = Object.values(vm);
-    if (window.chartVendor) { try { window.chartVendor.destroy(); } catch(e){} window.chartVendor = null; }
-    if (window.chartResponse) { try { window.chartResponse.destroy(); } catch(e){} window.chartResponse = null; }
-    var cv = document.getElementById('chart-vendor');
-    var cr = document.getElementById('chart-response');
-    if (cv && cv.parentElement) {
-        cv.parentElement.style.minHeight = '220px';
-        window.chartVendor = new Chart(cv.getContext('2d'),{
-            type:'bar',
-            data:{labels:vK,datasets:[{label:'工单数',data:vV,backgroundColor:'#1976d2'}]},
-            options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{beginAtZero:true,ticks:{stepSize:1}}}}
-        });
-    }
-    var rm = {};
-    filtered.filter(function(o){ return o.status==='已完成'&&o.completeTime; }).forEach(function(o){
-        var v=o.vendor||'未知';
-        var h=(new Date(o.completeTime).getTime()-new Date(o.createTime).getTime())/3600000;
-        if(!rm[v])rm[v]=[];rm[v].push(h);
-    });
-    var rK = Object.keys(rm);
-    var rV = rK.map(function(v){ var a=rm[v]; return Math.round(a.reduce(function(x,y){return x+y;},0)/a.length*10)/10; });
-    if (cr && cr.parentElement) {
-        cr.parentElement.style.minHeight = '220px';
-        window.chartResponse = new Chart(cr.getContext('2d'),{
-            type:'bar',
-            data:{labels:rK,datasets:[{label:'平均响应时长(h)',data:rV,backgroundColor:'#28a745'}]},
-            options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{beginAtZero:true}}}
-        });
-    }
-};
-
-</script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
 const T1 = 'ghp_x4kg';
 const T2 = 'IXl1hKop';
@@ -700,117 +548,10 @@ function changeStatus(id,s){
 }
 
 function showPendingDetail(t){
-    const now=new Date();
-    const ms=new Date(now.getFullYear(),now.getMonth(),1);
-    const wa=new Date(now.getTime()-7*86400000);
-    let os=t==='month'?workorders.filter(o=>new Date(o.createTime)>=ms&&o.status!=='宸插畬鎴?):workorders.filter(o=>new Date(o.createTime)>=wa&&o.status!=='宸插畬鎴?);
-    document.getElementById('pendingModalTitle').textContent=(t==='month'?'鏈湀':'鏈懆')+'鏈畬鎴?('+os.length+'鏉?';
-    document.querySelector('#pending-table tbody').innerHTML=os.map(o=>{
-        const ct=new Date(o.createTime);
-        const duration=now-ct;
-        return'<tr><td>'+o.id+'</td><td>'+o.dept+'</td><td>'+o.device+'</td><td>'+(o.desc||'').substring(0,10)+'</td><td>'+ct.toLocaleDateString()+'</td><td>'+formatDuration(duration)+'</td><td>'+getStatusHtml(o.status)+'</td></tr>';
-    }).join('');
-    new bootstrap.Modal(document.getElementById('pendingModal')).show();
-}
-function renderVendors(){
-    const tbody=document.querySelector('#vendor-table tbody');
-    tbody.innerHTML=vendors.map(v=>'<tr><td>'+v.type+'</td><td>'+v.vendor+'</td><td>'+v.contact+'</td><td>'+v.phone+'</td></tr>').join('');
-}
-function renderDashboard(){
-    const now=new Date();
-    const ms=new Date(now.getFullYear(),now.getMonth(),1);
-    const wa=new Date(now.getTime()-7*86400000);
-    const mo=workorders.filter(o=>new Date(o.createTime)>=ms);
-    const wo=workorders.filter(o=>new Date(o.createTime)>=wa);
-    document.getElementById('month-total').textContent=mo.length;
-    document.getElementById('month-done').textContent=mo.filter(o=>o.status==='宸插畬鎴?).length;
-    document.getElementById('month-pending').textContent=mo.filter(o=>o.status!=='宸插畬鎴?).length;
-    document.getElementById('week-total').textContent=wo.length;
-    document.getElementById('week-done').textContent=wo.filter(o=>o.status==='宸插畬鎴?).length;
-    document.getElementById('week-pending').textContent=wo.filter(o=>o.status!=='宸插畬鎴?).length;
-    const done=workorders.filter(o=>o.status==='宸插畬鎴?&&o.completeTime);
-    if(done.length>0){
-        const tot=done.reduce((s,o)=>s+(new Date(o.completeTime).getTime()-new Date(o.createTime).getTime()),0);
-        document.getElementById('avg-response').textContent=formatDuration(Math.round(tot/done.length));
-    }else{
-        document.getElementById('avg-response').textContent='0h';
-    }
-    const vm={};
-    workorders.forEach(o=>{const v=o.vendor||'鏈煡';vm[v]=(vm[v]||0)+1;});
-    const vK=Object.keys(vm),vV=Object.values(vm);
-    if(window.chartVendor)window.chartVendor.destroy();
-    window.chartVendor=new Chart(document.getElementById('chart-vendor').getContext('2d'),{
-        type:'bar',
-        data:{labels:vK,datasets:[{label:'宸ュ崟鏁?,data:vV,backgroundColor:'#1976d2'}]},
-        options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{beginAtZero:true,ticks:{stepSize:1}}}}
-    });
-    const rm={};
-    workorders.filter(o=>o.status==='宸插畬鎴?&&o.completeTime).forEach(o=>{
-        const v=o.vendor||'鏈煡';
-        const h=(new Date(o.completeTime).getTime()-new Date(o.createTime).getTime())/3600000;
-        if(!rm[v])rm[v]=[];rm[v].push(h);
-    });
-    const rK=Object.keys(rm);
-    const rV=rK.map(v=>{const a=rm[v];return Math.round(a.reduce((x,y)=>x+y,0)/a.length*10)/10;});
-    if(window.chartResponse)window.chartResponse.destroy();
-    window.chartResponse=new Chart(document.getElementById('chart-response').getContext('2d'),{
-        type:'bar',
-        data:{labels:rK,datasets:[{label:'骞冲潎鍝嶅簲鏃堕暱(h)',data:rV,backgroundColor:'#28a745'}]},
-        options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{beginAtZero:true}}}
-    });
-}
-function showPage(page){
-    const pages=['generate','workorders','dashboard','vendors','settings'];
-    pages.forEach(p=>{
-        document.getElementById('page-'+p).style.display='none';
-        document.getElementById('nav-'+p).classList.remove('active');
-        const m=document.getElementById('mnav-'+p);
-        if(m)m.classList.remove('active');
-    });
-    document.getElementById('page-'+page).style.display='block';
-    const nav=document.getElementById('nav-'+page);
-    if(nav)nav.classList.add('active');
-    const mnav=document.getElementById('mnav-'+page);
-    if(mnav)mnav.classList.add('active');
-    if(page==='workorders')renderWorkorders();
-    else if(page==='dashboard')renderDashboard();
-    else if(page==='vendors')renderVendors();
-    else if(page==='settings'){
-        const u=getCurrentUser();
-        if(u)document.getElementById('setting-username').value=u.username||'';
-        showAccountList();
-    }else if(page==='generate'){
-        const s=document.getElementById('edit-vendor');
-        if(s)s.innerHTML=vendors.map(v=>'<option value="'+v.vendor+'">'+v.vendor+'</option>').join('');
-    }
-}
-async function uploadToCloud(){
-    const gid=getGistId();
-    if(!gid){alert('璇峰厛鍦ㄨ缃腑濉啓Gist ID');return;}
-    try{
-        const res=await fetch('https://api.github.com/gists/'+gid,{
-            method:'PATCH',
-            headers:{'Authorization':'token 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','Content-Type':'application/json'},
-            body:JSON.stringify({description:'Workorders backup',files:{'workorders.json':{content:JSON.stringify({workorders,vendors,version:new Date().toISOString()})}}})
-        });
-        if(res.ok){alert('涓婁紶鎴愬姛');syncFromCloud();}
-        else{const e=await res.json();alert('涓婁紶澶辫触: '+(e.message||res.status));}
-    }catch(e){alert('涓婁紶澶辫触: '+e.message);}
-}
-async function syncFromCloud(){
-    const gid=getGistId();
-    if(!gid)return;
-    try{
-        const res=await fetch('https://api.github.com/gists/'+gid,{headers:{'Authorization':'token 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'}});
-        if(!res.ok)return;
-        const data=await res.json();
-        const f=data.files&&data.files['workorders.json'];
-        if(f&&f.content){
-            const p=JSON.parse(f.content);
-            if(p.workorders){workorders=p.workorders;saveWorkorders();alert('鍚屾鎴愬姛锛屽叡 '+workorders.length+' 鏉″伐鍗?);}
-        }
-    }catch(e){console.error(e);}
-}
-const ev=document.getElementById('edit-vendor');
-if(ev)ev.innerHTML=vendors.map(v=>'<option value="'+v.vendor+'">'+v.vendor+'</option>').join('');
-checkLogin();
+    const now = new Date();
+    const ms = new Date(now.getFullYear(),now.getMonth(),1);
+    const wa = new Date(now.getTime()-7*86400000);
+    let os = t==='month' ? workorders.filter(o=>new Date(o.createTime)>=ms && o.status!=='宸插畬鎴?) : workorders.filter(o=>new Date(o.createTime)>=wa && o.status!=='宸插畬鎴?);
+    document.getElementById('pendingModalTitle').textContent = (t==='month'?'鏈湀':'鏈懆') + '鏈畬鎴?(' + os.length + '鏉?';
+    document.querySelector('#pending-table tbody').innerHTML = os.map(o => {
+        const ct = new Date(o

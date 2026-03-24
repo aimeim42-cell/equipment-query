@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>设备运维信息查询</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: "Microsoft YaHei", sans-serif; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; padding: 20px; }
+        .container { max-width: 900px; margin: 0 auto; }
+        h1 { color: #fff; text-align: center; margin-bottom: 30px; text-shadow: 2px 2px 4px rgba(0,0,0,0.3); }
+        .search-box { background: #fff; border-radius: 12px; padding: 30px; box-shadow: 0 10px 40px rgba(0,0,0,0.2); }
+        .search-box label { display: block; margin-bottom: 10px; font-weight: bold; color: #333; }
+        .search-box input { width: 100%; padding: 12px 15px; font-size: 16px; border: 2px solid #ddd; border-radius: 8px; outline: none; transition: border-color 0.3s; }
+        .search-box input:focus { border-color: #667eea; }
+        .search-box button { width: 100%; margin-top: 15px; padding: 12px; font-size: 16px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: #fff; border: none; border-radius: 8px; cursor: pointer; transition: transform 0.2s; }
+        .search-box button:hover { transform: translateY(-2px); }
+        .result { margin-top: 20px; }
+        .org-header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: #fff; padding: 15px 20px; border-radius: 8px 8px 0 0; }
+        .org-header h2 { font-size: 20px; }
+        .org-header p { font-size: 14px; opacity: 0.9; margin-top: 5px; }
+        table { width: 100%; border-collapse: collapse; background: #fff; }
+        th, td { padding: 12px 15px; text-align: left; border-bottom: 1px solid #eee; }
+        th { background: #f8f9fa; font-weight: bold; color: #333; }
+        tr:hover { background: #f8f9fa; }
+        .no-result { text-align: center; padding: 40px; color: #666; }
+        .tip { text-align: center; color: #fff; margin-top: 20px; font-size: 14px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🏢 设备运维信息查询</h1>
+        <div class="search-box">
+            <label for="orgCode">请输入机构编号：</label>
+            <input type="text" id="orgCode" placeholder="例如：21001" onkeyup="if(event.key==='Enter')search()">
+            <button onclick="search()">查询</button>
+        </div>
+        <div id="result" class="result"></div>
+        <p class="tip">💡 提示：输入机构号后按回车或点击查询按钮</p>
+    </div>
+
+    <script>
+        // 机构号映射（从Excel读取的数据）
+        const data = {
+            "21001": [
+                {设备类型:"回单机", 设备品牌:"南天", 设备维护商:"广州南天电脑系统有限公司", 维护负责人:"吕日旺", 联系方式:"13077792184"},
+                {设备类型:"高速大额存取款机", 设备品牌:"中电", 设备维护商:"广西建投桂银科技有限公司", 维护负责人:"郭亮", 联系方式:"13977160058"},
+                {设备类型:"标准版智能柜台", 设备品牌:"长城", 设备维护商:"广东奔腾达电子有限公司", 维护负责人:"肖俊宏", 联系方式:"13878748626"},
+                {设备类型:"存取款一体机", 设备品牌:"日立", 设备维护商:"江苏国光信息产业股份有限公司", 维护负责人:"苏乃锋", 联系方式:"19977164610"},
+                {设备类型:"综合版智能柜台", 设备品牌:"中软", 设备维护商:"广西佰鼎科技有限公司", 维护负责人:"莫德文", 联系方式:"18278387986"},
+                {设备类型:"自助终端", 设备品牌:"南天", 设备维护商:"广州南天电脑系统有限公司", 维护负责人:"吕日旺", 联系方式:"13077792184"}
+            ],
+            "21002": [
+                {设备类型:"自助终端", 设备品牌:"南天", 设备维护商:"广州南天电脑系统有限公司", 维护负责人:"吕日旺", 联系方式:"13077792184"},
+                {设备类型:"标准版智能柜台", 设备品牌:"长城", 设备维护商:"广东奔腾达电子有限公司", 维护负责人:"肖俊宏", 联系方式:"13878748626"},
+                {设备类型:"综合版智能柜台", 设备品牌:"中软", 设备维护商:"广西佰鼎科技有限公司", 维护负责人:"莫德文", 联系方式:"18278387986"},
+                {设备类型:"高速大额存取款机", 设备品牌:"中电", 设备维护商:"广西建投桂银科技有限公司", 维护负责人:"郭亮", 联系方式:"13977160058"},
+                {设备类型:"回单机", 设备品牌:"南天", 设备维护商:"广州南天电脑系统有限公司", 维护负责人:"吕日旺", 联系方式:"13077792184"},
+                {设备类型:"存取款一体机", 设备品牌:"日立", 设备维护商:"江苏国光信息产业股份有限公司", 维护负责人:"苏乃锋", 联系方式:"19977164610"}
+            ]
+        };
+
+        function search() {
+            const orgCode = document.getElementById('orgCode').value.trim();
+            const resultDiv = document.getElementById('result');
+            
+            if (!orgCode) {
+                resultDiv.innerHTML = '<div class="no-result">请输入机构编号</div>';
+                return;
+            }
+
+            // 尝试从数据中查找
+            let orgData = data[orgCode];
+            
+            if (!orgData) {
+                // 如果本地没有，提示用户
+                resultDiv.innerHTML = `<div class="no-result">机构号 <strong>${orgCode}</strong> 未找到，请检查输入是否正确</div>`;
+                return;
+            }
+
+            let html = `
+                <div class="org-header">
+                    <h2>🏢 机构编号：${orgCode}</h2>
+                    <p>共 ${orgData.length} 条设备信息</p>
+                </div>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>设备类型</th>
+                            <th>设备品牌</th>
+                            <th>设备维护商</th>
+                            <th>维护负责人</th>
+                            <th>联系方式</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+            
+            orgData.forEach(item => {
+                html += `
+                    <tr>
+                        <td>${item.设备类型}</td>
+                        <td>${item.设备品牌}</td>
+                        <td>${item.设备维护商}</td>
+                        <td>${item.维护负责人}</td>
+                        <td>${item.联系方式}</td>
+                    </tr>
+                `;
+            });
+            
+            html += '</tbody></table>';
+            resultDiv.innerHTML = html;
+        }
+    </script>
+</body>
+</html>
