@@ -1,9 +1,9 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>缃戠偣杩愮淮绠＄悊</title>
+    <title>网点运维管理</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
         body{background:#e3f2fd;margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;font-size:14px}
@@ -17,9 +17,9 @@
         .login-box h4{text-align:center;margin-bottom:25px;color:#1976d2}
         .page-title{font-size:18px;font-weight:bold;margin-bottom:15px;padding-bottom:10px;border-bottom:2px solid #1976d2}
         .status-badge{display:inline-block;padding:3px 8px;border-radius:4px;font-size:11px;font-weight:500}
-        .status-鍝嶅簲涓瓄color:#007bff;background:#e7f1ff}
-        .status-瀹℃壒涓瓄color:#6f42c1;background:#f3e8ff}
-        .status-宸插畬鎴恵color:#28a745;background:#d4edda}
+        .status-响应中{color:#007bff;background:#e7f1ff}
+        .status-审批中{color:#6f42c1;background:#f3e8ff}
+        .status-已完成{color:#28a745;background:#d4edda}
         .card{border:none;border-radius:10px;box-shadow:0 2px 8px rgba(0,0,0,0.05);margin-bottom:15px}
         .card-header{background:#fff;border-bottom:1px solid #eee;padding:12px 15px;font-weight:600}
         .btn-primary{background:#1976d2;border:none;color:#fff}
@@ -28,12 +28,12 @@
         th{background:#f8f9fa;padding:10px;text-align:left;font-weight:600;color:#666;font-size:12px}
         td{padding:10px;border-bottom:1px solid #eee}
         .chart-container{position:relative;height:200px}
+        .status-select{width:90px;padding:2px 6px;font-size:11px;border-radius:4px;border:1px solid #ddd;background:#fff}
         @media(max-width:768px){
             .sidebar{display:none}
             .main-content{margin:0;padding:15px}
             .mobile-nav{position:fixed;bottom:0;left:0;right:0;background:#1976d2;display:flex;height:55px;z-index:100}
             .mobile-nav a{flex:1;text-align:center;color:#fff;padding:15px 0;font-size:11px;text-decoration:none}
-            .mobile-nav a.active{border-bottom:3px solid #fff}
             .main-content{padding-bottom:70px}
         }
     </style>
@@ -41,11 +41,12 @@
 <body>
 <div id="login-page" class="login-page">
     <div class="login-box">
-        <h4>缃戠偣杩愮淮绠＄悊</h4>
+        <h4>网点运维管理</h4>
+        <div id="login-error" class="alert alert-danger d-none"></div>
         <form id="login-form">
-            <div class="mb-3"><label class="form-label">鐢ㄦ埛鍚?/label><input type="text" class="form-control" id="login-username" required></div>
-            <div class="mb-3"><label class="form-label">瀵嗙爜</label><input type="password" class="form-control" id="login-password" required></div>
-            <button type="submit" class="btn btn-primary w-100 py-2">鐧诲綍</button>
+            <div class="mb-3"><label class="form-label">用户名</label><input type="text" class="form-control" id="login-username" required></div>
+            <div class="mb-3"><label class="form-label">密码</label><input type="password" class="form-control" id="login-password" required></div>
+            <button type="submit" class="btn btn-primary w-100 py-2" id="login-btn">登录</button>
         </form>
         <p class="text-center mt-3 text-muted small" id="login-hint"></p>
     </div>
@@ -53,764 +54,596 @@
 
 <div id="main-system" style="display:none;">
     <div class="sidebar d-none d-md-block">
-        <div class="logo">缃戠偣杩愮淮绠＄悊</div>
-        <a href="#" onclick="showPage('generate')" class="active" id="nav-generate">馃摑 宸ュ崟鐢熸垚</a>
-        <a href="#" onclick="showPage('workorders')" id="nav-workorders">馃搵 宸ュ崟绠＄悊</a>
-        <a href="#" onclick="showPage('dashboard')" id="nav-dashboard">馃搳 鏁版嵁鐪嬫澘</a>
-        <a href="#" onclick="showPage('vendors')" id="nav-vendors">馃懃 杩愮淮鍟?/a>
-        <a href="#" onclick="showPage('settings')" id="nav-settings">鈿欙笍 绯荤粺璁剧疆</a>
-        <a href="#" onclick="logout()">閫€鍑?/a>
-    </div>
-    <div class="mobile-nav d-md-none">
-        <a href="#" onclick="showPage('generate')" id="mnav-generate">馃摑</a>
-        <a href="#" onclick="showPage('workorders')" id="mnav-workorders">馃搵</a>
-        <a href="#" onclick="showPage('dashboard')" id="mnav-dashboard">馃搳</a>
-        <a href="#" onclick="showPage('vendors')" id="mnav-vendors">馃懃</a>
-        <a href="#" onclick="showPage('settings')" id="mnav-settings">鈿欙笍</a>
+        <div class="logo">网点运维管理</div>
+        <a href="#" onclick="showPage('generate');return false;" class="active" id="nav-generate">📝 工单生成</a>
+        <a href="#" onclick="showPage('workorders');return false;" id="nav-workorders">📋 工单管理</a>
+        <a href="#" onclick="showPage('dashboard');return false;" id="nav-dashboard">📊 数据看板</a>
+        <a href="#" onclick="showPage('vendors');return false;" id="nav-vendors">👥 运维商</a>
+        <a href="#" onclick="showPage('settings');return false;" id="nav-settings">⚙️ 系统设置</a>
+        <a href="#" onclick="logout();return false;">退出</a>
     </div>
     <div class="main-content">
         <div id="page-generate">
-            <div class="page-title">馃摑 宸ュ崟鐢熸垚</div>
+            <div class="page-title">📝 工单生成</div>
             <div class="card">
-                <div class="card-header">绮樿创宸ュ崟淇℃伅</div>
+                <div class="card-header">粘贴工单信息</div>
                 <div class="card-body">
-                    <textarea class="form-control mb-2" id="ai-input" rows="4" placeholder="绮樿创宸ュ崟淇℃伅..."></textarea>
-                    <button class="btn btn-primary btn-sm" onclick="analyzeWorkorder()">AI鏅鸿兘鍒嗘瀽</button>
+                    <textarea class="form-control mb-2" id="ai-input" rows="4" placeholder="粘贴工单信息..."></textarea>
+                    <button class="btn btn-primary btn-sm" onclick="analyzeWorkorder()">AI智能分析</button>
                 </div>
             </div>
             <div class="card" id="analysis-result" style="display:none;">
-                <div class="card-header">鍒嗘瀽缁撴灉</div>
+                <div class="card-header">分析结果</div>
                 <div class="card-body">
                     <div class="row g-2">
-                        <div class="col-6"><label class="small text-muted">鏈烘瀯</label><input class="form-control form-control-sm" id="edit-dept"></div>
-                        <div class="col-6"><label class="small text-muted">鎶ヤ慨浜?/label><input class="form-control form-control-sm" id="edit-person"></div>
-                        <div class="col-6"><label class="small text-muted">鐢佃瘽</label><input class="form-control form-control-sm" id="edit-phone"></div>
-                        <div class="col-6"><label class="small text-muted">璁惧</label><select class="form-select form-select-sm" id="edit-device" onchange="onDeviceChange()">
-                            <option>瀛樺彇娆句竴浣撴満/ATM</option><option>楂橀€熷ぇ棰濆瓨鍙栨鏈?/option><option>鍥炲崟鏈?鑷姪缁堢</option><option>缁煎悎鐗堟櫤鑳芥煖鍙?/option><option>鏍囧噯鐗堟櫤鑳芥煖鍙?/option><option>缃戦摱涓€浣撴満/LED璧板瓧灞?/option><option>绌鸿皟缁存姢</option><option>闆舵槦缁翠慨</option><option>鍙彿鏈?瀹ｄ紶灞?/option><option>寰佷俊鏌ヨ鏈?/option><option>鍏朵粬</option>
+                        <div class="col-6"><label class="small text-muted">机构</label><input class="form-control form-control-sm" id="edit-dept"></div>
+                        <div class="col-6"><label class="small text-muted">报修人</label><input class="form-control form-control-sm" id="edit-person"></div>
+                        <div class="col-6"><label class="small text-muted">电话</label><input class="form-control form-control-sm" id="edit-phone"></div>
+                        <div class="col-6"><label class="small text-muted">设备</label><select class="form-select form-select-sm" id="edit-device" onchange="onDeviceChange()">
+                            <option>存取款一体机/ATM</option><option>高速大额存取款机</option><option>回单机/自助终端</option><option>综合版智能柜台</option><option>标准版智能柜台</option><option>网银一体机/LED走字屏</option><option>空调维护</option><option>零星维修</option><option>叫号机/宣传屏</option><option>征信查询机</option><option>其他</option>
                         </select></div>
-                        <div class="col-6"><label class="small text-muted">杩愮淮鍟?/label><select class="form-select form-select-sm" id="edit-vendor"></select></div>
-                        <div class="col-12"><label class="small text-muted">鏁呴殰鎻忚堪</label><input class="form-control form-control-sm" id="edit-desc"></div>
+                        <div class="col-6"><label class="small text-muted">运维商</label><select class="form-select form-select-sm" id="edit-vendor"></select></div>
+                        <div class="col-12"><label class="small text-muted">故障描述</label><input class="form-control form-control-sm" id="edit-desc"></div>
                     </div>
-                    <button class="btn btn-success btn-sm mt-2" onclick="confirmCreate()">纭鐢熸垚宸ュ崟</button>
+                    <button class="btn btn-success btn-sm mt-2" onclick="confirmCreate()">确认生成工单</button>
                 </div>
             </div>
             <div class="card" id="success-result" style="display:none;">
-                <div class="card-header bg-success text-white">鍒涘缓鎴愬姛</div>
+                <div class="card-header bg-success text-white">创建成功</div>
                 <div class="card-body" id="success-content"></div>
             </div>
         </div>
         <div id="page-workorders" style="display:none;">
             <div class="d-flex justify-content-between align-items-center mb-2">
-                <div class="page-title mb-0">馃搵 宸ュ崟绠＄悊</div>
-                <div>
-                    <button class="btn btn-outline-primary btn-sm" onclick="syncFromCloud()">馃攧 鍚屾</button>
-                    <button class="btn btn-warning btn-sm" onclick="uploadToCloud()">鈽侊笍涓婁紶</button>
-                </div>
+                <div class="page-title mb-0">📋 工单管理</div>
+                <button class="btn btn-outline-primary btn-sm" onclick="syncFromCloud()">🔄 同步</button>
             </div>
             <div class="d-flex flex-wrap gap-1 mb-2">
-                <button class="btn btn-outline-secondary btn-sm" onclick="filterStatus('all')">鍏ㄩ儴</button>
-                <button class="btn btn-outline-primary btn-sm" onclick="filterStatus('鍝嶅簲涓?)">鍝嶅簲涓?/button>
-                <button class="btn btn-sm" style="color:#6f42c1;border-color:#6f42c1" onclick="filterStatus('瀹℃壒涓?)">瀹℃壒涓?/button>
-                <button class="btn btn-outline-success btn-sm" onclick="filterStatus('宸插畬鎴?)">宸插畬鎴?/button>
+                <button class="btn btn-outline-secondary btn-sm" onclick="filterStatus('all')">全部</button>
+                <button class="btn btn-outline-primary btn-sm" onclick="filterStatus('响应中')">响应中</button>
+                <button class="btn btn-sm" style="color:#6f42c1;border-color:#6f42c1" onclick="filterStatus('审批中')">审批中</button>
+                <button class="btn btn-outline-success btn-sm" onclick="filterStatus('已完成')">已完成</button>
             </div>
             <div class="card mb-2">
                 <div class="card-body p-2">
-                    <div class="d-flex gap-1 mb-2">
-                        <input class="form-control form-control-sm" id="search-order" placeholder="鎼滅储鏈烘瀯..." style="max-width:150px" placeholder="馃攳 鎼滅储鏈烘瀯...">
-                        <input type="date" class="form-control form-control-sm" id="search-date-start">
-                        <input type="date" class="form-control form-control-sm" id="search-date-end">
-                        <input type="date" class="form-control form-control-sm" id="search-date-end">
-                        <button class="btn btn-primary btn-sm" onclick="renderWorkorders()">鏌ヨ</button>
+                    <div class="d-flex gap-1">
+                        <input class="form-control form-control-sm" id="search-order" placeholder="🔍 搜索机构..." style="max-width:150px">
+                        <button class="btn btn-primary btn-sm" onclick="renderWorkorders()">查询</button>
                     </div>
                 </div>
             </div>
             <div style="overflow-x:auto">
                 <table class="table table-sm table-hover" id="workorder-table">
-                    <thead><tr><th>宸ュ崟鍙?/th><th>鏈烘瀯</th><th>璁惧</th><th>鏁呴殰</th><th>鐘舵€?/th><th>杩愮淮鍟?/th><th>鏃堕棿</th></tr></thead>
+                    <thead><tr><th>工单号</th><th>机构</th><th>设备</th><th>故障</th><th>状态</th><th>运维商</th><th>时间</th></tr></thead>
                     <tbody></tbody>
                 </table>
             </div>
             <div class="d-flex justify-content-between align-items-center mt-2">
                 <span class="text-muted small" id="page-info"></span>
                 <div>
-                    <button class="btn btn-sm btn-outline-secondary" onclick="changePage(-1)">鈥?/button>
-                    <button class="btn btn-sm btn-outline-secondary" onclick="changePage(1)">鈥?/button>
+                    <button class="btn btn-sm btn-outline-secondary" onclick="changePage(-1)">‹</button>
+                    <button class="btn btn-sm btn-outline-secondary" onclick="changePage(1)">›</button>
                 </div>
             </div>
         </div>
         <div id="page-dashboard" style="display:none;">
-            <div class="page-title">馃搳 鏁版嵁鐪嬫澘</div>
+            <div class="page-title">📊 数据看板</div>
             <div class="card">
                 <div class="card-body">
                     <div class="row text-center">
-                        <div class="col-4"><div class="text-muted small">鏈湀</div><h5 id="month-total">0</h5></div>
-                        <div class="col-4"><div class="text-success small">瀹屾垚</div><h5 class="text-success" id="month-done">0</h5></div>
-                        <div class="col-4"><div class="text-warning small" onclick="showPendingDetail('month')" style="cursor:pointer">鏈畬鎴?/div><h5 class="text-warning" id="month-pending">0</h5></div>
-                        <div class="col-4 mt-2"><div class="text-muted small">鏈懆</div><h5 id="week-total">0</h5></div>
-                        <div class="col-4 mt-2"><div class="text-success small">瀹屾垚</div><h5 class="text-success" id="week-done">0</h5></div>
-                        <div class="col-4 mt-2"><div class="text-warning small" onclick="showPendingDetail('week')" style="cursor:pointer">鏈畬鎴?/div><h5 class="text-warning" id="week-pending">0</h5></div>
+                        <div class="col-4"><div class="text-muted small">本月</div><h5 id="month-total">0</h5></div>
+                        <div class="col-4"><div class="text-success small">完成</div><h5 class="text-success" id="month-done">0</h5></div>
+                        <div class="col-4"><div class="text-warning small">未完成</div><h5 class="text-warning" id="month-pending">0</h5></div>
+                        <div class="col-4 mt-2"><div class="text-muted small">本周</div><h5 id="week-total">0</h5></div>
+                        <div class="col-4 mt-2"><div class="text-success small">完成</div><h5 class="text-success" id="week-done">0</h5></div>
+                        <div class="col-4 mt-2"><div class="text-warning small">未完成</div><h5 class="text-warning" id="week-pending">0</h5></div>
                     </div>
-                    <div class="text-center mt-2 border-top pt-2"><span class="text-muted">骞冲潎鍝嶅簲:</span><strong id="avg-response">0h</strong></div>
+                    <div class="text-center mt-2 border-top pt-2"><span class="text-muted">平均响应:</span> <strong id="avg-response">0h</strong></div>
                 </div>
             </div>
             <div class="row">
-                <div class="col-12 col-md-6 mb-2"><div class="card"><div class="card-body p-2"><h6>馃彚 渚涘簲鍟嗗伐鍗曞垎甯?/h6><div class="chart-container"><canvas id="chart-vendor" width="400" height="220"></canvas></div></div></div></div>
-                <div class="col-12 col-md-6 mb-2"><div class="card"><div class="card-body p-2"><h6>鈴憋笍 渚涘簲鍟嗗搷搴旀椂闀?/h6><div class="chart-container"><canvas id="chart-response" width="400" height="220"></canvas></div></div></div></div>
+                <div class="col-12 col-md-6 mb-2"><div class="card"><div class="card-body p-2"><h6>📉 供应商工单分布</h6><div class="chart-container"><canvas id="chart-vendor"></canvas></div></div></div></div>
+                <div class="col-12 col-md-6 mb-2"><div class="card"><div class="card-body p-2"><h6>🔔 供应商响应时长</h6><div class="chart-container"><canvas id="chart-response"></canvas></div></div></div></div>
             </div>
         </div>
         <div id="page-vendors" style="display:none;">
-            <div class="page-title">馃懃 杩愮淮鍟?/div>
+            <div class="page-title">👥 运维商</div>
             <div class="card">
-                <table class="table table-sm mb-0" id="vendor-table"><thead><tr><th>璁惧绫诲瀷</th><th>杩愮淮鍟?/th><th>鑱旂郴浜?/th><th>鐢佃瘽</th></tr></thead><tbody></tbody></table>
+                <table class="table table-sm mb-0" id="vendor-table"><thead><tr><th>设备</th><th>运维商</th><th>联系人</th><th>电话</th></tr></thead><tbody></tbody></table>
             </div>
         </div>
         <div id="page-settings" style="display:none;">
-            <div class="page-title">鈿欙笍 绯荤粺璁剧疆</div>
-            <div class="card mb-2">
-                <div class="card-header">璐﹀彿绠＄悊</div>
+            <div class="page-title">⚙️ 系统设置</div>
+            <div class="card mb-2" id="account-manage-card">
+                <div class="card-header d-flex justify-content-between align-items-center"><span>账号管理</span><button class="btn btn-primary btn-sm" onclick="showAddAccountModal()">+ 新增账号</button></div>
                 <div class="card-body">
-                    <div class="mb-2">
-                        <button class="btn btn-primary btn-sm" onclick="showAddAccountModal()">+ 鏂板璐﹀彿</button>
-                        <button class="btn btn-outline-secondary btn-sm" onclick="showAccountList()">鏌ョ湅璐﹀彿鍒楄〃</button>
-                    </div>
-                    <table class="table table-sm" id="account-table">
-                        <thead><tr><th>鐢ㄦ埛鍚?/th><th>鏉冮檺</th><th>褰掑睘杩愮淮鍟?/th><th>鎿嶄綔</th></tr></thead>
-                        <tbody></tbody>
-                    </table>
+                    <table class="table table-sm" id="account-table"><thead><tr><th>用户名</th><th>权限</th><th>归属运维商</th><th>操作</th></tr></thead><tbody></tbody></table>
                 </div>
             </div>
             <div class="card mb-2">
-                <div class="card-header">褰撳墠璐﹀彿璁剧疆</div>
+                <div class="card-header">当前账号设置</div>
                 <div class="card-body">
                     <div class="row g-2">
-                        <div class="col-6"><label class="small">鐢ㄦ埛鍚?/label><input class="form-control form-control-sm" id="setting-username"></div>
-                        <div class="col-6"><label class="small">鏂板瘑鐮?/label><input type="password" class="form-control form-control-sm" id="setting-password"></div>
+                        <div class="col-6"><label class="small">用户名</label><input class="form-control form-control-sm" id="setting-username"></div>
+                        <div class="col-6"><label class="small">新密码</label><input type="password" class="form-control form-control-sm" id="setting-password"></div>
                     </div>
-                    <button class="btn btn-primary btn-sm mt-2" onclick="saveSettings()">淇濆瓨</button>
-                </div>
-            </div>
-            <div class="card mb-2">
-                <div class="card-header">浜戠鍚屾</div>
-                <div class="card-body">
-                    <input class="form-control form-control-sm mb-2" id="gist-id" placeholder="Gist ID">
-                    <button class="btn btn-primary btn-sm" onclick="saveGistId()">淇濆瓨</button>
+                    <button class="btn btn-primary btn-sm mt-2" onclick="saveSettings()">保存</button>
                 </div>
             </div>
             <div class="card">
-                <div class="card-header">鏁版嵁瀹夊叏</div>
-                <div class="card-body">
-                    <button class="btn btn-danger btn-sm" onclick="clearData()">娓呴櫎鎵€鏈夋暟鎹?/button>
-                </div>
+                <div class="card-header">数据安全</div>
+                <div class="card-body"><button class="btn btn-danger btn-sm" onclick="clearData()">清除所有数据</button></div>
             </div>
         </div>
     </div>
 </div>
 
-<!-- 鏂板璐﹀彿寮圭獥 -->
-<div class="modal fade" id="addAccountModal">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header"><h6 class="modal-title">鏂板璐﹀彿</h6><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
-            <div class="modal-body">
-                <div class="mb-2"><label class="small">鐢ㄦ埛鍚?/label><input class="form-control form-control-sm" id="new-account-username"></div>
-                <div class="mb-2"><label class="small">瀵嗙爜</label><input type="password" class="form-control form-control-sm" id="new-account-password"></div>
-                <div class="mb-2"><label class="small">鏉冮檺</label><select class="form-select form-select-sm" id="new-account-role"><option value="admin">绠＄悊</option><option value="vendor">渚涘簲鍟?/option></select></div>
-                <div class="mb-2" id="vendor-select-div" style="display:none;"><label class="small">褰掑睘杩愮淮鍟?/label><select class="form-select form-select-sm" id="new-account-vendor"></select></div>
-                <button class="btn btn-primary btn-sm" onclick="addAccount()">淇濆瓨</button>
-            </div>
-        </div>
+<div class="modal fade" id="addAccountModal"><div class="modal-dialog"><div class="modal-content">
+    <div class="modal-header"><h6 class="modal-title">新增账号</h6><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+    <div class="modal-body">
+        <div class="mb-2"><label class="small">用户名</label><input class="form-control form-control-sm" id="new-account-username"></div>
+        <div class="mb-2"><label class="small">密码</label><input type="password" class="form-control form-control-sm" id="new-account-password"></div>
+        <div class="mb-2"><label class="small">权限</label><select class="form-select form-select-sm" id="new-account-role" onchange="toggleVendorSelect()"><option value="admin">管理</option><option value="vendor">供应商</option></select></div>
+        <div class="mb-2" id="vendor-select-div" style="display:none;"><label class="small">归属运维商</label><select class="form-select form-select-sm" id="new-account-vendor"></select></div>
+        <button class="btn btn-primary btn-sm" onclick="addAccount()">保存</button>
     </div>
-</div>
-
-<div class="modal fade" id="pendingModal"><div class="modal-dialog"><div class="modal-content"><div class="modal-header"><h6 class="modal-title" id="pendingModalTitle"></h6><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body"><table class="table table-sm" id="pending-table"><thead><tr><th>宸ュ崟鍙?/th><th>鏈烘瀯</th><th>璁惧</th><th>鏁呴殰</th><th>鎶ヤ慨鏃堕棿</th><th>鏃堕暱</th><th>鐘舵€?/th></tr></thead><tbody></tbody></table></div></div></div></div>
+</div></div></div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/chart.js">
-
-// 运维商"其他"设备类型：切换设备类型时自动更新状态选项
-function handleDeviceTypeChange(deviceType) {
-    var statusSelect = document.getElementById('edit-status');
-    if (!statusSelect) return;
-    var u = getCurrentUser();
-    var isVendorOther = (u && u.role === 'vendor' && deviceType === '其他');
-    var opts = statusSelect.options;
-    for (var i = 0; i < opts.length; i++) {
-        if (isVendorOther && opts[i].value === '待分配') {
-            opts[i].text = '其他';
-            opts[i].value = '其他';
-            if (statusSelect.value === '待分配') statusSelect.value = '其他';
-        } else if (opts[i].value === '其他') {
-            opts[i].text = '待分配';
-            opts[i].value = '待分配';
-        }
-    }
-}
-
-// 增强generateWorkorder：运维商"其他"类型时自动设置vendor为当前用户
-var _origGenerateWorkorder = generateWorkorder;
-generateWorkorder = function() {
-    var u = getCurrentUser();
-    var vendor = document.getElementById('edit-vendor').value;
-    var device = document.getElementById('edit-device-type').value;
-    var dept = document.getElementById('edit-dept').value;
-    var desc = document.getElementById('edit-desc').value;
-    var status = document.getElementById('edit-status').value;
-    if (u && u.role === 'vendor' && device === '其他') { vendor = u.username; }
-    if (!dept || !device) { alert('请填写完整信息'); return; }
-    var now = new Date();
-    var id = 'WO' + now.getFullYear() + String(now.getMonth()+1).padStart(2,'0') + String(now.getDate()).padStart(2,'0') + String(Math.random()).slice(2,6);
-    var o = {
-        id: id, createTime: now.toISOString(), createBy: u ? u.username : 'admin',
-        dept: dept, device: device, vendor: vendor, desc: desc,
-        status: (u && u.role === 'vendor' && device === '其他') ? '其他' : status,
-        responseTime: null, completeTime: null
-    };
-    workorders.push(o);
-    saveWorkorders();
-    renderWorkorders();
-    bootstrap.Modal.getInstance(document.getElementById('generateModal')).hide();
-    alert('工单 ' + id + ' 已生成');
-    document.getElementById('edit-desc').value = '';
-};
-
-// showPage增强：进入生成页面时自动分析工单
-var _origShowPage = showPage;
-showPage = function(page) {
-    _origShowPage(page);
-    if (page === 'generate') {
-        setTimeout(function() { analyzeWorkorder(); }, 100);
-    }
-};
-
-// renderWorkorders增强：供应商角色只看自己的工单
-var _origRenderWorkorders = renderWorkorders;
-renderWorkorders = function() {
-    var u = getCurrentUser();
-    var kw = (document.getElementById('search-order') || {value:''}).value.trim().toLowerCase();
-    var ds = (document.getElementById('search-date-start') || {value:''}).value;
-    var de = (document.getElementById('search-date-end') || {value:''}).value;
-    var list = workorders.filter(function(o) {
-        if (u && u.role === 'vendor' && o.createBy !== u.username) return false;
-        if (kw && o.id.toLowerCase().indexOf(kw) < 0 && (o.dept||'').toLowerCase().indexOf(kw) < 0 && (o.vendor||'').toLowerCase().indexOf(kw) < 0) return false;
-        if (ds && o.createTime < ds) return false;
-        if (de && o.createTime > de + 'T23:59:59') return false;
-        return true;
-    });
-    list.sort(function(a,b){ return new Date(b.createTime) - new Date(a.createTime); });
-    var html = '<table class="table table-sm table-hover mb-0"><thead><tr><th>工单号</th><th>创建时间</th><th>机构</th><th>设备类型</th><th>供应商</th><th>状态</th><th>操作</th></tr></thead><tbody>';
-    if (list.length === 0) {
-        html += '<tr><td colspan="7" class="text-center text-muted py-4">暂无数据</td></tr>';
-    } else {
-        list.forEach(function(o) {
-            html += '<tr>';
-            html += '<td><span class="text-primary fw-bold" style="cursor:pointer" onclick="showOrderDetail(\''+o.id+'\')">'+o.id+'</span></td>';
-            html += '<td>'+new Date(o.createTime).toLocaleString('zh-CN',{hour12:false})+'</td>';
-            html += '<td>'+o.dept+'</td>';
-            html += '<td>'+o.device+'</td>';
-            html += '<td>'+(o.vendor||'')+'</td>';
-            html += '<td>'+getStatusHtml(o.status)+'</td>';
-            html += '<td>';
-            var u2 = getCurrentUser();
-            if ((!u2 || u2.role === 'admin') && o.status !== '已完成') {
-                html += '<button class="btn btn-xs btn-outline-primary me-1" onclick="showChangeStatus(\''+o.id+'\')">改状态</button>';
-            }
-            html += '<button class="btn btn-xs btn-outline-secondary" onclick="showOrderDetail(\''+o.id+'\')">详情</button>';
-            html += '</td></tr>';
-        });
-    }
-    html += '</tbody></table>';
-    document.getElementById('workorder-list').innerHTML = html;
-};
-
-// renderDashboard增强：供应商角色只看自己的数据
-var _origRenderDashboard = renderDashboard;
-renderDashboard = function() {
-    var u = getCurrentUser();
-    var filtered = (u && u.role === 'vendor') ? workorders.filter(function(o){ return o.createBy === u.username; }) : workorders;
-    var now = new Date();
-    var ms = new Date(now.getFullYear(),now.getMonth(),1);
-    var wa = new Date(now.getTime()-7*86400000);
-    var mo = filtered.filter(function(o){ return new Date(o.createTime) >= ms; });
-    var wo = filtered.filter(function(o){ return new Date(o.createTime) >= wa; });
-    document.getElementById('month-total').textContent = mo.length;
-    document.getElementById('month-done').textContent = mo.filter(function(o){ return o.status==='已完成'; }).length;
-    document.getElementById('month-pending').textContent = mo.filter(function(o){ return o.status!=='已完成'; }).length;
-    document.getElementById('week-total').textContent = wo.length;
-    document.getElementById('week-done').textContent = wo.filter(function(o){ return o.status==='已完成'; }).length;
-    document.getElementById('week-pending').textContent = wo.filter(function(o){ return o.status!=='已完成'; }).length;
-    var done = filtered.filter(function(o){ return o.status==='已完成'&&o.completeTime; });
-    if (done.length > 0) {
-        var tot = done.reduce(function(s,o){ return s+(new Date(o.completeTime).getTime()-new Date(o.createTime).getTime()); }, 0);
-        document.getElementById('avg-response').textContent = formatDuration(Math.round(tot/done.length));
-    } else {
-        document.getElementById('avg-response').textContent = '0h';
-    }
-    var vm = {};
-    filtered.forEach(function(o){ var v=o.vendor||'未知'; vm[v]=(vm[v]||0)+1; });
-    var vK = Object.keys(vm), vV = Object.values(vm);
-    if (window.chartVendor) { try { window.chartVendor.destroy(); } catch(e){} window.chartVendor = null; }
-    if (window.chartResponse) { try { window.chartResponse.destroy(); } catch(e){} window.chartResponse = null; }
-    var cv = document.getElementById('chart-vendor');
-    var cr = document.getElementById('chart-response');
-    if (cv && cv.parentElement) {
-        cv.parentElement.style.minHeight = '220px';
-        window.chartVendor = new Chart(cv.getContext('2d'),{
-            type:'bar',
-            data:{labels:vK,datasets:[{label:'工单数',data:vV,backgroundColor:'#1976d2'}]},
-            options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{beginAtZero:true,ticks:{stepSize:1}}}}
-        });
-    }
-    var rm = {};
-    filtered.filter(function(o){ return o.status==='已完成'&&o.completeTime; }).forEach(function(o){
-        var v=o.vendor||'未知';
-        var h=(new Date(o.completeTime).getTime()-new Date(o.createTime).getTime())/3600000;
-        if(!rm[v])rm[v]=[];rm[v].push(h);
-    });
-    var rK = Object.keys(rm);
-    var rV = rK.map(function(v){ var a=rm[v]; return Math.round(a.reduce(function(x,y){return x+y;},0)/a.length*10)/10; });
-    if (cr && cr.parentElement) {
-        cr.parentElement.style.minHeight = '220px';
-        window.chartResponse = new Chart(cr.getContext('2d'),{
-            type:'bar',
-            data:{labels:rK,datasets:[{label:'平均响应时长(h)',data:rV,backgroundColor:'#28a745'}]},
-            options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{beginAtZero:true}}}
-        });
-    }
-};
-
-</script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
-const T1 = 'ghp_x4kg';
-const T2 = 'IXl1hKop';
-const T3 = 'CrxSVU31lxz3iOkxvq3T6UVG';
-const GITHUB_TOKEN = T1 + T2 + T3;
+// Supabase 配置
+const SB_URL = 'https://vvtyfadyrlpzckhfxvuc.supabase.co';
+const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ2dHlmYWR5cmxwemNraGZ4dnVjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQzODMyMDIsImV4cCI6MjA4OTk1OTIwMn0.kswbNejVjfKZBMOju0Jyl9SnYEHOux5LRZO5Dw7MKRw';
 
-const vendors = [
-    {type:'瀛樺彇娆句竴浣撴満/ATM',vendor:'骞夸笢濂旇吘杈剧數瀛愭湁闄愬叕鍙?,contact:'鍛ㄦ椽鍟?闊╀笢',phone:'18176252256'},
-    {type:'楂橀€熷ぇ棰濆瓨鍙栨鏈?,vendor:'骞夸笢濂旇吘杈剧數瀛愭湁闄愬叕鍙?,contact:'闊╀笢',phone:'18178601382'},
-    {type:'鍥炲崟鏈?鑷姪缁堢',vendor:'骞垮窞鍗楀ぉ鐢佃剳绯荤粺鏈夐檺鍏徃',contact:'姊佸お閽?,phone:'13877130518'},
-    {type:'缁煎悎鐗堟櫤鑳芥煖鍙?,vendor:'骞胯タ浣伴紟绉戞妧鏈夐檺鍏徃',contact:'鑾痉鏂?,phone:'18278387986'},
-    {type:'鏍囧噯鐗堟櫤鑳芥煖鍙?,vendor:'骞夸笢濂旇吘杈剧數瀛愭湁闄愬叕鍙?,contact:'鑲栦繆瀹?,phone:'13878748626'},
-    {type:'缃戦摱涓€浣撴満/LED璧板瓧灞?,vendor:'骞胯タ浣充粫杩愮綉缁滅鎶€鏈夐檺鍏徃',contact:'闄堝墤浜?,phone:'13977300180'},
-    {type:'绌鸿皟缁存姢',vendor:'骞胯タ鍗楀畞甯傛簮鐢抽殕璐告槗鏈夐檺鍏徃',contact:'闄堝浗鏂?,phone:'19077164249'},
-    {type:'闆舵槦缁翠慨',vendor:'骞胯タ涓夊鸡寤鸿宸ョ▼鏈夐檺鍏徃',contact:'鏇炬捣榫?,phone:'13407718924'},
-    {type:'鍙彿鏈?瀹ｄ紶灞?,vendor:'妗傛灄瀹囧嘲鐢靛瓙绉戞妧鏈夐檺鍏徃',contact:'鍞愬瓭绾?,phone:'18178357885'},
-    {type:'寰佷俊鏌ヨ鏈?,vendor:'鍖椾含淇＄珛鍚堝垱淇℃伅鎶€鏈湁闄愬叕鍙?,contact:'璋洜閲?,phone:'13878372640'},
-    {type:'鍏朵粬',vendor:'鍏朵粬',contact:'',phone:''}
-];
-
+// 全局变量
 let workorders = [];
 let currentFilter = 'all';
 let analyzedData = null;
 let currentPage = 1;
 const PAGE_SIZE = 30;
-let cachedGistSha = '';
-let cachedGistFile = '';
 let currentUser = null;
-let chartVendor = null;
-let chartResponse = null;
+let chartVendor = null, chartResponse = null;
 
-try { workorders = JSON.parse(localStorage.getItem('workorders') || '[]'); } catch(e) { workorders = []; }
+const vendors = [
+    {type:'存取款一体机/ATM',vendor:'广东奔腾达电子有限公司',contact:'周洪商/韩东',phone:'18176252256'},
+    {type:'高速大额存取款机',vendor:'广东奔腾达电子有限公司',contact:'韩东',phone:'18178601382'},
+    {type:'回单机/自助终端',vendor:'广州南天电脑系统有限公司',contact:'梁太鑫',phone:'13877130518'},
+    {type:'综合版智能柜台',vendor:'广西百鼎科技有限责任公司',contact:'莫德文',phone:'18278387986'},
+    {type:'标准版智能柜台',vendor:'广东奔腾达电子有限公司',contact:'肖俊宏',phone:'13878748626'},
+    {type:'网银一体机/LED走字屏',vendor:'广西佳仕运网络科技有限公司',contact:'陈剑峰',phone:'13977300180'},
+    {type:'空调维护',vendor:'广西南宁市源申隆贸易有限公司',contact:'陈国文',phone:'19077164249'},
+    {type:'零星维修',vendor:'广西三弦建设工程有限公司',contact:'曾海龙',phone:'13407718924'},
+    {type:'叫号机/宣传屏',vendor:'桂林宇峰电子科技有限公司',contact:'唐孝红',phone:'18178357885'},
+    {type:'征信查询机',vendor:'北京信立合创信息技术有限公司',contact:'谭因金',phone:'13878372640'},
+    {type:'其他',vendor:'其他',contact:'',phone:''}
+];
 
-function getGistId() { return localStorage.getItem('gist_id') || ''; }
-function saveGistId() { const id = document.getElementById('gist-id').value.trim(); if(id) { localStorage.setItem('gist_id', id); alert('淇濆瓨鎴愬姛锛?); } }
+// Supabase REST API 调用
+async function supabaseGet(table) {
+    const res = await fetch(SB_URL + '/rest/v1/' + table, {
+        headers: { 'apikey': SB_KEY, 'Authorization': 'Bearer ' + SB_KEY }
+    });
+    return res.json();
+}
+
+async function supabasePost(table, data) {
+    const res = await fetch(SB_URL + '/rest/v1/' + table, {
+        method: 'POST',
+        headers: { 'apikey': SB_KEY, 'Authorization': 'Bearer ' + SB_KEY, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+        body: JSON.stringify(data)
+    });
+    return res.ok;
+}
+
+async function supabasePatch(table, data, match) {
+    let url = SB_URL + '/rest/v1/' + table + '?';
+    for(const key in match) url += key + '.eq.' + encodeURIComponent(match[key]) + '&';
+    const res = await fetch(url, {
+        method: 'PATCH',
+        headers: { 'apikey': SB_KEY, 'Authorization': 'Bearer ' + SB_KEY, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+        body: JSON.stringify(data)
+    });
+    return res.ok;
+}
+
+async function supabaseDelete(table, match) {
+    let url = SB_URL + '/rest/v1/' + table + '?';
+    for(const key in match) url += key + '.eq.' + encodeURIComponent(match[key]) + '&';
+    const res = await fetch(url, {
+        method: 'DELETE',
+        headers: { 'apikey': SB_KEY, 'Authorization': 'Bearer ' + SB_KEY }
+    });
+    return res.ok;
+}
+
+async function loadAccounts() { return await supabaseGet('accounts'); }
+async function loadWorkorders() { return await supabaseGet('workorders'); }
+
+async function saveAccount(account) {
+    // 先删除同名账号
+    await supabaseDelete('accounts', { username: account.username });
+    return await supabasePost('accounts', account);
+}
+
+async function deleteAccountDB(username) { return await supabaseDelete('accounts', { username }); }
+
+async function saveWorkorder(order) {
+    await supabaseDelete('workorders', { id: order.id });
+    return await supabasePost('workorders', order);
+}
+
+async function updateWorkorder(id, data) { return await supabasePatch('workorders', data, { id }); }
+async function deleteWorkorderDB(id) { return await supabaseDelete('workorders', { id }); }
+
+async function loadAllData() {
+    workorders = await loadWorkorders();
+    if(!Array.isArray(workorders)) workorders = [];
+    workorders.sort((a,b) => new Date(b.create_time) - new Date(a.create_time));
+    renderWorkorders();
+    renderDashboard();
+}
+
+function getVendorNames() {
+    return [...new Set(vendors.map(v => v.vendor))].filter(n => n !== '其他');
+}
+
 function getStatusHtml(status) { return '<span class="status-badge status-' + status + '">' + status + '</span>'; }
 
 function formatDuration(ms) {
     if(!ms) return '-';
     const h = Math.floor(ms/3600000);
     const m = Math.floor((ms%3600000)/60000);
-    if(h > 24) return Math.floor(h/24) + '澶? + (h%24) + 'h';
-    return h + 'h' + m + 'm';
+    return h > 24 ? Math.floor(h/24) + '天' + (h%24) + 'h' : h + 'h' + m + 'm';
 }
 
-function getAccounts() {
-    try { return JSON.parse(localStorage.getItem('accounts') || '[]'); } 
-    catch { return []; }
-}
-
-function saveAccounts(accounts) {
-    localStorage.setItem('accounts', JSON.stringify(accounts));
-}
-
-function getCurrentUser() {
-    const u = localStorage.getItem('currentUser');
-    if(u) return JSON.parse(u);
-    const s = JSON.parse(localStorage.getItem('settings') || '{}');
-    if(s.username) {
-        return { username: s.username, role: 'admin', vendor: '' };
+// 恢复出厂设置
+(function() {
+    const params = new URLSearchParams(window.location.search);
+    if(params.get('reset') === '1') {
+        localStorage.clear();
+        alert('已恢复出厂设置！');
+        window.location.href = window.location.pathname;
     }
-    return null;
-}
+})();
 
 function checkLogin() {
-    const s = JSON.parse(localStorage.getItem('settings') || '{}');
-    document.getElementById('login-page').style.display = 'flex';
-    document.getElementById('main-system').style.display = 'none';
-    document.getElementById('login-hint').textContent = s.username ? '璇风櫥褰? : '棣栨璁剧疆璐﹀彿';
-    document.getElementById('gist-id').value = localStorage.getItem('gist_id') || '';
+    const savedUser = localStorage.getItem('currentUser');
+    if(savedUser) {
+        currentUser = JSON.parse(savedUser);
+        document.getElementById('login-page').style.display='none';
+        document.getElementById('main-system').style.display='block';
+        loadAllData();
+    } else {
+        document.getElementById('login-page').style.display='flex';
+        document.getElementById('main-system').style.display='none';
+        document.getElementById('login-hint').textContent='请登录';
+    }
 }
 
-document.getElementById('login-form').onsubmit = function(e) {
+document.getElementById('login-form').onsubmit = async function(e) {
     e.preventDefault();
-    const u = document.getElementById('login-username').value;
-    const p = document.getElementById('login-password').value;
-    const s = JSON.parse(localStorage.getItem('settings') || '{}');
-    const accounts = getAccounts();
+    const btn = document.getElementById('login-btn');
+    const errDiv = document.getElementById('login-error');
+    btn.disabled = true;
+    btn.textContent = '登录中...';
+    errDiv.classList.add('d-none');
     
-    if(!s.username && !accounts.length) {
-        localStorage.setItem('settings',JSON.stringify({username:u,password:p}));
-        localStorage.setItem('currentUser',JSON.stringify({username:u,role:'admin',vendor:''}));
-        alert('璁剧疆鎴愬姛锛?);
-        document.getElementById('login-page').style.display='none';
-        document.getElementById('main-system').style.display='block';
-    } else if(u===s.username && p===s.password) {
-        localStorage.setItem('currentUser',JSON.stringify({username:u,role:'admin',vendor:''}));
-        document.getElementById('login-page').style.display='none';
-        document.getElementById('main-system').style.display='block';
-    } else {
-        const account = accounts.find(a => a.username === u && a.password === p);
-        if(account) {
-            localStorage.setItem('currentUser',JSON.stringify(account));
-            document.getElementById('login-page').style.display='none';
-            document.getElementById('main-system').style.display='block';
+    const u = document.getElementById('login-username').value.trim();
+    const p = document.getElementById('login-password').value.trim();
+    
+    try {
+        const accounts = await loadAccounts();
+        if(!Array.isArray(accounts) || accounts.length === 0) {
+            // 首次登录
+            const ok = await saveAccount({ username: u, password: p, role: 'admin', vendor: '' });
+            if(ok) {
+                currentUser = { username: u, role: 'admin', vendor: '' };
+                localStorage.setItem('currentUser', JSON.stringify(currentUser));
+                alert('设置成功！');
+                document.getElementById('login-page').style.display='none';
+                document.getElementById('main-system').style.display='block';
+                loadAllData();
+            }
         } else {
-            alert('閿欒');
+            const account = accounts.find(a => a.username === u && a.password === p);
+            if(account) {
+                currentUser = account;
+                localStorage.setItem('currentUser', JSON.stringify(currentUser));
+                document.getElementById('login-page').style.display='none';
+                document.getElementById('main-system').style.display='block';
+                loadAllData();
+            } else {
+                errDiv.textContent = '用户名或密码错误';
+                errDiv.classList.remove('d-none');
+            }
         }
+    } catch(err) {
+        errDiv.textContent = '连接失败，请检查网络';
+        errDiv.classList.remove('d-none');
+        console.error(err);
     }
+    
+    btn.disabled = false;
+    btn.textContent = '登录';
 };
 
-function logout() { 
+function logout() {
     localStorage.removeItem('currentUser');
-    checkLogin(); 
+    currentUser = null;
+    workorders = [];
+    checkLogin();
     document.getElementById('login-username').value='';
-    document.getElementById('login-password').value=''; 
+    document.getElementById('login-password').value='';
 }
 
-function saveSettings(){
-    const u=document.getElementById('setting-username').value;
-    const p=document.getElementById('setting-password').value;
-    if(u){
-        const s=JSON.parse(localStorage.getItem('settings')||'{}');
-        localStorage.setItem('settings',JSON.stringify({username:u,password:p||s.password}));
-        alert('淇濆瓨鎴愬姛');
+async function saveSettings() {
+    const u = document.getElementById('setting-username').value.trim();
+    const p = document.getElementById('setting-password').value;
+    if(u) {
+        const ok = await saveAccount({ username: u, password: p || currentUser.password, role: currentUser.role, vendor: currentUser.vendor });
+        if(ok) {
+            currentUser.username = u;
+            if(p) currentUser.password = p;
+            localStorage.setItem('currentUser', JSON.stringify(currentUser));
+            alert('保存成功');
+        }
     }
 }
 
 function showAddAccountModal() {
-    const modal = new bootstrap.Modal(document.getElementById('addAccountModal'));
+    new bootstrap.Modal(document.getElementById('addAccountModal')).show();
     document.getElementById('new-account-username').value = '';
     document.getElementById('new-account-password').value = '';
     document.getElementById('new-account-role').value = 'admin';
     document.getElementById('vendor-select-div').style.display = 'none';
-    
-    const vendorSelect = document.getElementById('new-account-vendor');
-    vendorSelect.innerHTML = vendors.map(v => '<option value="'+v.vendor+'">'+v.vendor+'</option>').join('');
-    
-    modal.show();
+    document.getElementById('new-account-vendor').innerHTML = getVendorNames().map(v => '<option value="'+v+'">'+v+'</option>').join('');
 }
 
-document.getElementById('new-account-role').onchange = function() {
-    document.getElementById('vendor-select-div').style.display = this.value === 'vendor' ? 'block' : 'none';
-};
+function toggleVendorSelect() {
+    document.getElementById('vendor-select-div').style.display = document.getElementById('new-account-role').value === 'vendor' ? 'block' : 'none';
+}
 
-function addAccount() {
+async function addAccount() {
     const username = document.getElementById('new-account-username').value.trim();
     const password = document.getElementById('new-account-password').value.trim();
     const role = document.getElementById('new-account-role').value;
-    const vendor = document.getElementById('new-account-vendor').value;
-    
-    if(!username || !password) { alert('璇峰～鍐欏畬鏁?); return; }
-    
-    const accounts = getAccounts();
-    if(accounts.find(a => a.username === username)) { alert('鐢ㄦ埛鍚嶅凡瀛樺湪'); return; }
-    
-    accounts.push({ username, password, role, vendor });
-    saveAccounts(accounts);
-    bootstrap.Modal.getInstance(document.getElementById('addAccountModal')).hide();
-    showAccountList();
-    alert('璐﹀彿娣诲姞鎴愬姛');
+    const vendor = role === 'vendor' ? document.getElementById('new-account-vendor').value : '';
+    if(!username || !password) { alert('请填写用户名和密码'); return; }
+    const ok = await saveAccount({ username, password, role, vendor });
+    if(ok) {
+        bootstrap.Modal.getInstance(document.getElementById('addAccountModal')).hide();
+        showAccountList();
+        alert('账号添加成功');
+    }
 }
 
-function showAccountList() {
-    const accounts = getAccounts();
+async function showAccountList() {
+    const accounts = await loadAccounts();
     const tbody = document.querySelector('#account-table tbody');
-    if(!accounts.length) {
-        tbody.innerHTML = '<tr><td colspan="4" class="text-muted">鏆傛棤璐﹀彿</td></tr>';
-        return;
-    }
-    tbody.innerHTML = accounts.map((a, i) => 
-        '<tr><td>'+a.username+'</td><td>'+(a.role==='admin'?'绠＄悊':'渚涘簲鍟?)+'</td><td>'+(a.vendor||'-')+'</td><td><button class="btn btn-danger btn-sm py-0" onclick="deleteAccount('+i+')">鍒犻櫎</button></td></tr>'
-    ).join('');
+    tbody.innerHTML = (Array.isArray(accounts) && accounts.length) ? accounts.map(a =>
+        '<tr><td>'+a.username+'</td><td>'+(a.role==='admin'?'<span class="badge bg-primary">管理</span>':'<span class="badge bg-success">供应商</span>')+'</td><td>'+(a.vendor||'-')+'</td><td><button class="btn btn-danger btn-sm py-0" onclick="deleteAccount(\''+a.username+'\')">删除</button></td></tr>'
+    ).join('') : '<tr><td colspan="4" class="text-muted text-center">暂无账号</td></tr>';
 }
 
-function deleteAccount(index) {
-    if(!confirm('纭畾鍒犻櫎锛?)) return;
-    const accounts = getAccounts();
-    accounts.splice(index, 1);
-    saveAccounts(accounts);
+async function deleteAccount(username) {
+    if(!confirm('确定删除账号 '+username+' ？')) return;
+    await deleteAccountDB(username);
     showAccountList();
 }
 
-function clearData(){
-    if(confirm('娓呴櫎鎵€鏈夋暟鎹?')){
-        workorders=[];
-        saveWorkorders();
+async function clearData() {
+    if(!confirm('确定要清除所有数据吗？')) return;
+    for(const o of workorders) await deleteWorkorderDB(o.id);
+    await loadAllData();
+    alert('数据已清除');
+}
+
+function generateOrderNo() {
+    const n = new Date();
+    return 'WO' + n.getFullYear() + String(n.getMonth()+1).padStart(2,'0') + String(n.getDate()).padStart(2,'0') + String(Math.random()).slice(2,6);
+}
+
+function onDeviceChange() {
+    const d = document.getElementById('edit-device').value;
+    const s = document.getElementById('edit-vendor');
+    if(currentUser && currentUser.role === 'vendor' && currentUser.vendor) {
+        s.innerHTML = '<option value="'+currentUser.vendor+'">'+currentUser.vendor+'</option>';
+    } else {
+        s.innerHTML = vendors.filter(x => d.includes(x.type.split('/')[0]) || x.type === d || x.type === '其他' || x.type === '零星维修').map(v => '<option value="'+v.vendor+'">'+v.vendor+'</option>').join('');
     }
 }
 
-function saveWorkorders(){
-    localStorage.setItem('workorders',JSON.stringify(workorders));
-    renderWorkorders();
-    renderDashboard();
-}
-
-function getVendorList(d){
-    return vendors.filter(x=>d.includes(x.type.split('/')[0])||x.type===d||x.type==='鍏朵粬'||x.type==='闆舵槦缁翠慨');
-}
-
-function generateOrderNo(){
-    const n=new Date();
-    return'WO'+n.getFullYear()+String(n.getMonth()+1).padStart(2,'0')+String(n.getDate()).padStart(2,'0')+String(workorders.length+1).padStart(4,'0');
-}
-
-function onDeviceChange(){
-    const d=document.getElementById('edit-device').value;
-    const s=document.getElementById('edit-vendor');
-    s.innerHTML=getVendorList(d).map(v=>'<option value="'+v.vendor+'">'+v.vendor+'</option>').join('');
-}
-
-function analyzeWorkorder(){
-    const i=document.getElementById('ai-input').value;
-    if(!i.trim()){alert('璇疯緭鍏?);return;}
-    let dept='',person='',phone='',device='鍏朵粬',desc='';
-    const dm=i.match(/鎶ヤ慨閮ㄩ棬[锛?]\s*(.+?)(?:\n|$)/);if(dm)dept=dm[1].trim();
-    const pm=i.match(/鎶ヤ慨浜篬鍙婂拰]*鑱旂郴鐢佃瘽*[锛?]\s*(.+?)(?:\n|$)/);
-    if(pm){const pp=pm[1].trim();const m=pp.match(/(\d{11})/);if(m){phone=m[1];person=pp.replace(m[1],'').replace(/[锛屻€?]/g,'').trim();}else person=pp;}
-    if(!phone){const m=i.match(/(\d{11})/);if(m)phone=m[1];}
-    const d2=i.match(/鍏蜂綋鎶ヤ慨椤圭洰[锛?]\s*(.+?)(?:\n|$)/);if(d2)desc=d2[1].trim();
-    const l=i.toLowerCase();
-    if(l.includes('atm')||l.includes('鍙栨鏈?))device='瀛樺彇娆句竴浣撴満/ATM';
-    else if(l.includes('楂橀€?)||l.includes('澶ч'))device='楂橀€熷ぇ棰濆瓨鍙栨鏈?;
-    else if(l.includes('鍥炲崟')||l.includes('鑷姪缁堢'))device='鍥炲崟鏈?鑷姪缁堢';
-    else if(l.includes('缁煎悎鐗?))device='缁煎悎鐗堟櫤鑳芥煖鍙?;
-    else if(l.includes('鏍囧噯鐗?)||l.includes('鏅鸿兘鏌滃彴'))device='鏍囧噯鐗堟櫤鑳芥煖鍙?;
-    else if(l.includes('led')||l.includes('鏄剧ず灞?)||l.includes('缃戦摱涓€浣撴満'))device='缃戦摱涓€浣撴満/LED璧板瓧灞?;
-    else if(l.includes('绌鸿皟'))device='绌鸿皟缁存姢';
-    else if(l.includes('鍙彿')||l.includes('瀹ｄ紶灞?))device='鍙彿鏈?瀹ｄ紶灞?;
-    else if(l.includes('寰佷俊')||l.includes('鏌ヨ鏈?))device='寰佷俊鏌ヨ鏈?;
-    else if(l.includes('闆舵槦')||l.includes('缁翠慨'))device='闆舵槦缁翠慨';
-    analyzedData={dept,person,phone,device,desc};
-    document.getElementById('edit-dept').value=dept||'';
-    document.getElementById('edit-person').value=person||'';
-    document.getElementById('edit-phone').value=phone||'';
-    document.getElementById('edit-device').value=device;
-    document.getElementById('edit-desc').value=desc||'';
+function analyzeWorkorder() {
+    const i = document.getElementById('ai-input').value;
+    if(!i.trim()) { alert('请输入工单信息'); return; }
+    let dept='', person='', phone='', device='其他', desc='';
+    const dm = i.match(/报修部门[：:]\s*(.+?)(?:\n|$)/); if(dm) dept = dm[1].trim();
+    const pm = i.match(/报修人[及和]*联系电话[：:]\s*(.+?)(?:\n|$)/);
+    if(pm) { const pp = pm[1].trim(); const m = pp.match(/(\d{11})/); if(m) { phone = m[1]; person = pp.replace(m[1],'').replace(/[，。]/g,'').trim(); } else person = pp; }
+    if(!phone) { const m = i.match(/(\d{11})/); if(m) phone = m[1]; }
+    const d2 = i.match(/具体报修项目[：:]\s*(.+?)(?:\n|$)/); if(d2) desc = d2[1].trim();
+    const l = i.toLowerCase();
+    if(l.includes('atm') || l.includes('取款机')) device = '存取款一体机/ATM';
+    else if(l.includes('高速') || l.includes('大额')) device = '高速大额存取款机';
+    else if(l.includes('回单') || l.includes('自助终端')) device = '回单机/自助终端';
+    else if(l.includes('综合版')) device = '综合版智能柜台';
+    else if(l.includes('标准版') || l.includes('智能柜台')) device = '标准版智能柜台';
+    else if(l.includes('led') || l.includes('显示屏')) device = '网银一体机/LED走字屏';
+    else if(l.includes('空调')) device = '空调维护';
+    else if(l.includes('叫号') || l.includes('宣传屏')) device = '叫号机/宣传屏';
+    else if(l.includes('征信') || l.includes('查询机')) device = '征信查询机';
+    else if(l.includes('零星') || l.includes('维修')) device = '零星维修';
+    
+    analyzedData = { dept, person, phone, device, desc };
+    document.getElementById('edit-dept').value = dept || '';
+    document.getElementById('edit-person').value = person || '';
+    document.getElementById('edit-phone').value = phone || '';
+    document.getElementById('edit-device').value = device;
+    document.getElementById('edit-desc').value = desc || '';
     onDeviceChange();
-    document.getElementById('analysis-result').style.display='block';
-    document.getElementById('success-result').style.display='none';
+    document.getElementById('analysis-result').style.display = 'block';
+    document.getElementById('success-result').style.display = 'none';
 }
 
-function confirmCreate(){
-    if(!analyzedData)return;
-    const o={
-        id:generateOrderNo(),
-        dept:document.getElementById('edit-dept').value,
-        person:document.getElementById('edit-person').value,
-        phone:document.getElementById('edit-phone').value,
-        device:document.getElementById('edit-device').value,
-        desc:document.getElementById('edit-desc').value,
-        vendor:document.getElementById('edit-vendor').value,
-        status:'鍝嶅簲涓?,
-        createTime:new Date().toISOString(),
-        assignTime:new Date().toISOString(),
-        completeTime:null
+async function confirmCreate() {
+    if(!analyzedData) return;
+    let vendor = document.getElementById('edit-vendor').value;
+    if(currentUser && currentUser.role === 'vendor') vendor = currentUser.vendor;
+    
+    const order = {
+        id: generateOrderNo(),
+        dept: document.getElementById('edit-dept').value,
+        person: document.getElementById('edit-person').value,
+        phone: document.getElementById('edit-phone').value,
+        device: document.getElementById('edit-device').value,
+        description: document.getElementById('edit-desc').value,
+        vendor: vendor,
+        status: '响应中',
+        create_time: new Date().toISOString(),
+        assign_time: new Date().toISOString(),
+        complete_time: null,
+        created_by: currentUser ? currentUser.username : 'system'
     };
-    workorders.unshift(o);
-    saveWorkorders();
-    document.getElementById('analysis-result').style.display='none';
-    document.getElementById('ai-input').value='';
-    document.getElementById('success-content').innerHTML='<p>宸ュ崟鍙凤細<strong>'+o.id+'</strong></p><p>鏈烘瀯锛?+o.dept+'</p><p>璁惧锛?+o.device+'</p><p>杩愮淮鍟嗭細'+o.vendor+'</p><p>鐘舵€侊細'+o.status+'</p>';
-    document.getElementById('success-result').style.display='block';
-    analyzedData=null;
-}
-
-function getFilteredOrders(){
-    const now=new Date();
-    const s=document.getElementById('search-order').value.toLowerCase();
-    const ds=document.getElementById('search-date-start').value;
-    const de=document.getElementById('search-date-end').value;
-    const user = getCurrentUser();
     
-    let filtered = workorders;
-    
-    // 渚涘簲鍟嗘潈闄愯繃婊?    if(user && user.role === 'vendor' && user.vendor) {
-        filtered = filtered.filter(o => o.vendor === user.vendor);
+    if(await saveWorkorder(order)) {
+        await loadAllData();
+        document.getElementById('analysis-result').style.display = 'none';
+        document.getElementById('ai-input').value = '';
+        document.getElementById('success-content').innerHTML = '<p>工单号：<strong>'+order.id+'</strong></p><p>机构：'+order.dept+'</p><p>设备：'+order.device+'</p><p>运维商：'+order.vendor+'</p><p>状态：'+order.status+'</p>';
+        document.getElementById('success-result').style.display = 'block';
+        analyzedData = null;
     }
-    
-    return filtered.filter(o=>{
-        if(currentFilter!=='all'&&o.status!==currentFilter)return false;
-        if(s&&!(o.dept||'').toLowerCase().includes(s))return false;
-        if(ds||de){
-            const c=new Date(o.createTime).toISOString().split('T')[0];
-            if(ds&&c<ds)return false;
-            if(de&&c>de)return false
-        }
-        return true;
-    }).sort((a,b)=>new Date(b.createTime)-new Date(a.createTime));
 }
 
-function renderWorkorders(){
+function getFilteredOrders() {
+    let filtered = workorders;
+    if(currentUser && currentUser.role === 'vendor' && currentUser.vendor) filtered = filtered.filter(o => o.vendor === currentUser.vendor);
+    const s = document.getElementById('search-order').value.toLowerCase();
+    return filtered.filter(o => {
+        if(currentFilter !== 'all' && o.status !== currentFilter) return false;
+        if(s && !(o.dept || '').toLowerCase().includes(s)) return false;
+        return true;
+    });
+}
+
+function renderWorkorders() {
     const filtered = getFilteredOrders();
     const totalPages = Math.ceil(filtered.length / PAGE_SIZE) || 1;
     if(currentPage > totalPages) currentPage = totalPages;
     const start = (currentPage - 1) * PAGE_SIZE;
-    const end = start + PAGE_SIZE;
-    const pageData = filtered.slice(start, end);
-    const user = getCurrentUser();
+    const pageData = filtered.slice(start, start + PAGE_SIZE);
+    const isAdmin = !currentUser || currentUser.role === 'admin';
     
-    document.querySelector('#workorder-table tbody').innerHTML=pageData.map(o=>{
-        const ct = new Date(o.createTime);
-        const desc = (o.desc || '').substring(0, 12);
-        return '<tr><td>'+o.id+'</td><td>'+o.dept+'</td><td>'+o.device+'</td><td>'+desc+'</td><td>'+getStatusHtml(o.status)+'</td><td>'+(o.vendor||'-')+'</td><td>'+ct.toLocaleDateString()+'</td></tr>';
+    document.querySelector('#workorder-table tbody').innerHTML = pageData.map(o => {
+        const ct = new Date(o.create_time);
+        const desc = (o.description || '').substring(0, 12);
+        let statusCell = getStatusHtml(o.status);
+        if(isAdmin) {
+            const color = o.status === '响应中' ? '#007bff' : o.status === '审批中' ? '#6f42c1' : '#28a745';
+            statusCell = '<select class="status-select" style="color:'+color+'" onchange="handleStatusChange(\''+o.id+'\', this.value)">'+
+                '<option value="响应中"'+(o.status==='响应中'?' selected':'')+'>响应中</option>'+
+                '<option value="审批中"'+(o.status==='审批中'?' selected':'')+'>审批中</option>'+
+                '<option value="已完成"'+(o.status==='已完成'?' selected':'')+'>已完成</option></select>';
+        }
+        return '<tr><td>'+o.id+'</td><td>'+o.dept+'</td><td>'+o.device+'</td><td>'+desc+'</td><td>'+statusCell+'</td><td>'+(o.vendor||'-')+'</td><td>'+ct.toLocaleDateString()+'</td></tr>';
     }).join('');
-    
-    document.getElementById('page-info').textContent = filtered.length + '鏉?绗? + currentPage + '/' + totalPages + '椤?;
+    document.getElementById('page-info').textContent = filtered.length + '条 第' + currentPage + '/' + totalPages + '页';
 }
 
-function changePage(delta){
+async function handleStatusChange(id, status) {
+    const data = { status };
+    if(status === '已完成') data.complete_time = new Date().toISOString();
+    await updateWorkorder(id, data);
+    await loadAllData();
+}
+
+function changePage(delta) {
     const filtered = getFilteredOrders();
     const totalPages = Math.ceil(filtered.length / PAGE_SIZE) || 1;
-    currentPage += delta;
-    if(currentPage < 1) currentPage = 1;
-    if(currentPage > totalPages) currentPage = totalPages;
+    currentPage = Math.max(1, Math.min(totalPages, currentPage + delta));
     renderWorkorders();
 }
 
-function filterStatus(s){currentFilter=s;currentPage=1;renderWorkorders();}
+function filterStatus(s) { currentFilter = s; currentPage = 1; renderWorkorders(); }
 
-function changeStatus(id,s){
-    const o=workorders.find(x=>x.id===id);
-    if(o){
-        o.status=s==='鍝嶅簲'?'鍝嶅簲涓?:s==='瀹℃壒'?'瀹℃壒涓?:'宸插畬鎴?;
-        if(o.status==='宸插畬鎴?)o.completeTime=new Date().toISOString();
-        else o.completeTime=null;
-        saveWorkorders();
+function renderDashboard() {
+    let filtered = workorders;
+    if(currentUser && currentUser.role === 'vendor' && currentUser.vendor) filtered = filtered.filter(o => o.vendor === currentUser.vendor);
+    
+    const now = new Date();
+    const ms = new Date(now.getFullYear(), now.getMonth(), 1);
+    const wa = new Date(now.getTime() - 7 * 86400000);
+    const mo = filtered.filter(o => new Date(o.create_time) >= ms);
+    const wo = filtered.filter(o => new Date(o.create_time) >= wa);
+    
+    document.getElementById('month-total').textContent = mo.length;
+    document.getElementById('month-done').textContent = mo.filter(o => o.status === '已完成').length;
+    document.getElementById('month-pending').textContent = mo.filter(o => o.status !== '已完成').length;
+    document.getElementById('week-total').textContent = wo.length;
+    document.getElementById('week-done').textContent = wo.filter(o => o.status === '已完成').length;
+    document.getElementById('week-pending').textContent = wo.filter(o => o.status !== '已完成').length;
+    
+    const done = filtered.filter(o => o.status === '已完成' && o.complete_time);
+    if(done.length > 0) {
+        const avg = done.reduce((s, o) => s + (new Date(o.complete_time).getTime() - new Date(o.create_time).getTime()), 0) / done.length;
+        document.getElementById('avg-response').textContent = formatDuration(Math.round(avg));
+    } else {
+        document.getElementById('avg-response').textContent = '0h';
     }
+    
+    const vm = {};
+    filtered.forEach(o => { const v = o.vendor || '未知'; vm[v] = (vm[v] || 0) + 1; });
+    if(window.chartVendor) window.chartVendor.destroy();
+    window.chartVendor = new Chart(document.getElementById('chart-vendor').getContext('2d'), {
+        type: 'bar', data: { labels: Object.keys(vm), datasets: [{ data: Object.values(vm), backgroundColor: '#1976d2' }] },
+        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } }
+    });
+    
+    const rm = {};
+    filtered.filter(o => o.status === '已完成' && o.complete_time).forEach(o => {
+        const v = o.vendor || '未知';
+        const h = (new Date(o.complete_time).getTime() - new Date(o.create_time).getTime()) / 3600000;
+        if(!rm[v]) rm[v] = []; rm[v].push(h);
+    });
+    if(window.chartResponse) window.chartResponse.destroy();
+    window.chartResponse = new Chart(document.getElementById('chart-response').getContext('2d'), {
+        type: 'bar', data: { labels: Object.keys(rm), datasets: [{ data: Object.keys(rm).map(v => Math.round(rm[v].reduce((a,b) => a+b, 0) / rm[v].length * 10) / 10), backgroundColor: '#28a745' }] },
+        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } }
+    });
 }
 
-function showPendingDetail(t){
-    const now=new Date();
-    const ms=new Date(now.getFullYear(),now.getMonth(),1);
-    const wa=new Date(now.getTime()-7*86400000);
-    let os=t==='month'?workorders.filter(o=>new Date(o.createTime)>=ms&&o.status!=='宸插畬鎴?):workorders.filter(o=>new Date(o.createTime)>=wa&&o.status!=='宸插畬鎴?);
-    document.getElementById('pendingModalTitle').textContent=(t==='month'?'鏈湀':'鏈懆')+'鏈畬鎴?('+os.length+'鏉?';
-    document.querySelector('#pending-table tbody').innerHTML=os.map(o=>{
-        const ct=new Date(o.createTime);
-        const duration=now-ct;
-        return'<tr><td>'+o.id+'</td><td>'+o.dept+'</td><td>'+o.device+'</td><td>'+(o.desc||'').substring(0,10)+'</td><td>'+ct.toLocaleDateString()+'</td><td>'+formatDuration(duration)+'</td><td>'+getStatusHtml(o.status)+'</td></tr>';
-    }).join('');
-    new bootstrap.Modal(document.getElementById('pendingModal')).show();
+function renderVendors() {
+    document.querySelector('#vendor-table tbody').innerHTML = vendors.map(v => '<tr><td>'+v.type+'</td><td>'+v.vendor+'</td><td>'+v.contact+'</td><td>'+v.phone+'</td></tr>').join('');
 }
-function renderVendors(){
-    const tbody=document.querySelector('#vendor-table tbody');
-    tbody.innerHTML=vendors.map(v=>'<tr><td>'+v.type+'</td><td>'+v.vendor+'</td><td>'+v.contact+'</td><td>'+v.phone+'</td></tr>').join('');
+
+async function syncFromCloud() {
+    await loadAllData();
+    alert('同步成功，共 ' + workorders.length + ' 条工单');
 }
-function renderDashboard(){
-    const now=new Date();
-    const ms=new Date(now.getFullYear(),now.getMonth(),1);
-    const wa=new Date(now.getTime()-7*86400000);
-    const mo=workorders.filter(o=>new Date(o.createTime)>=ms);
-    const wo=workorders.filter(o=>new Date(o.createTime)>=wa);
-    document.getElementById('month-total').textContent=mo.length;
-    document.getElementById('month-done').textContent=mo.filter(o=>o.status==='宸插畬鎴?).length;
-    document.getElementById('month-pending').textContent=mo.filter(o=>o.status!=='宸插畬鎴?).length;
-    document.getElementById('week-total').textContent=wo.length;
-    document.getElementById('week-done').textContent=wo.filter(o=>o.status==='宸插畬鎴?).length;
-    document.getElementById('week-pending').textContent=wo.filter(o=>o.status!=='宸插畬鎴?).length;
-    const done=workorders.filter(o=>o.status==='宸插畬鎴?&&o.completeTime);
-    if(done.length>0){
-        const tot=done.reduce((s,o)=>s+(new Date(o.completeTime).getTime()-new Date(o.createTime).getTime()),0);
-        document.getElementById('avg-response').textContent=formatDuration(Math.round(tot/done.length));
-    }else{
-        document.getElementById('avg-response').textContent='0h';
-    }
-    const vm={};
-    workorders.forEach(o=>{const v=o.vendor||'鏈煡';vm[v]=(vm[v]||0)+1;});
-    const vK=Object.keys(vm),vV=Object.values(vm);
-    if(window.chartVendor)window.chartVendor.destroy();
-    window.chartVendor=new Chart(document.getElementById('chart-vendor').getContext('2d'),{
-        type:'bar',
-        data:{labels:vK,datasets:[{label:'宸ュ崟鏁?,data:vV,backgroundColor:'#1976d2'}]},
-        options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{beginAtZero:true,ticks:{stepSize:1}}}}
+
+function showPage(page) {
+    ['generate', 'workorders', 'dashboard', 'vendors', 'settings'].forEach(p => {
+        document.getElementById('page-' + p).style.display = 'none';
+        document.getElementById('nav-' + p).classList.remove('active');
     });
-    const rm={};
-    workorders.filter(o=>o.status==='宸插畬鎴?&&o.completeTime).forEach(o=>{
-        const v=o.vendor||'鏈煡';
-        const h=(new Date(o.completeTime).getTime()-new Date(o.createTime).getTime())/3600000;
-        if(!rm[v])rm[v]=[];rm[v].push(h);
-    });
-    const rK=Object.keys(rm);
-    const rV=rK.map(v=>{const a=rm[v];return Math.round(a.reduce((x,y)=>x+y,0)/a.length*10)/10;});
-    if(window.chartResponse)window.chartResponse.destroy();
-    window.chartResponse=new Chart(document.getElementById('chart-response').getContext('2d'),{
-        type:'bar',
-        data:{labels:rK,datasets:[{label:'骞冲潎鍝嶅簲鏃堕暱(h)',data:rV,backgroundColor:'#28a745'}]},
-        options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{beginAtZero:true}}}
-    });
-}
-function showPage(page){
-    const pages=['generate','workorders','dashboard','vendors','settings'];
-    pages.forEach(p=>{
-        document.getElementById('page-'+p).style.display='none';
-        document.getElementById('nav-'+p).classList.remove('active');
-        const m=document.getElementById('mnav-'+p);
-        if(m)m.classList.remove('active');
-    });
-    document.getElementById('page-'+page).style.display='block';
-    const nav=document.getElementById('nav-'+page);
-    if(nav)nav.classList.add('active');
-    const mnav=document.getElementById('mnav-'+page);
-    if(mnav)mnav.classList.add('active');
-    if(page==='workorders')renderWorkorders();
-    else if(page==='dashboard')renderDashboard();
-    else if(page==='vendors')renderVendors();
-    else if(page==='settings'){
-        const u=getCurrentUser();
-        if(u)document.getElementById('setting-username').value=u.username||'';
+    document.getElementById('page-' + page).style.display = 'block';
+    document.getElementById('nav-' + page).classList.add('active');
+    
+    if(page === 'workorders') renderWorkorders();
+    else if(page === 'dashboard') renderDashboard();
+    else if(page === 'vendors') renderVendors();
+    else if(page === 'settings') {
+        if(currentUser) document.getElementById('setting-username').value = currentUser.username || '';
         showAccountList();
-    }else if(page==='generate'){
-        const s=document.getElementById('edit-vendor');
-        if(s)s.innerHTML=vendors.map(v=>'<option value="'+v.vendor+'">'+v.vendor+'</option>').join('');
+        document.getElementById('account-manage-card').style.display = (currentUser && currentUser.role === 'vendor') ? 'none' : 'block';
+    } else if(page === 'generate') {
+        onDeviceChange();
     }
 }
-async function uploadToCloud(){
-    const gid=getGistId();
-    if(!gid){alert('璇峰厛鍦ㄨ缃腑濉啓Gist ID');return;}
-    try{
-        const res=await fetch('https://api.github.com/gists/'+gid,{
-            method:'PATCH',
-            headers:{'Authorization':'token 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','Content-Type':'application/json'},
-            body:JSON.stringify({description:'Workorders backup',files:{'workorders.json':{content:JSON.stringify({workorders,vendors,version:new Date().toISOString()})}}})
-        });
-        if(res.ok){alert('涓婁紶鎴愬姛');syncFromCloud();}
-        else{const e=await res.json();alert('涓婁紶澶辫触: '+(e.message||res.status));}
-    }catch(e){alert('涓婁紶澶辫触: '+e.message);}
-}
-async function syncFromCloud(){
-    const gid=getGistId();
-    if(!gid)return;
-    try{
-        const res=await fetch('https://api.github.com/gists/'+gid,{headers:{'Authorization':'token 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'}});
-        if(!res.ok)return;
-        const data=await res.json();
-        const f=data.files&&data.files['workorders.json'];
-        if(f&&f.content){
-            const p=JSON.parse(f.content);
-            if(p.workorders){workorders=p.workorders;saveWorkorders();alert('鍚屾鎴愬姛锛屽叡 '+workorders.length+' 鏉″伐鍗?);}
-        }
-    }catch(e){console.error(e);}
-}
-const ev=document.getElementById('edit-vendor');
-if(ev)ev.innerHTML=vendors.map(v=>'<option value="'+v.vendor+'">'+v.vendor+'</option>').join('');
+
+// 初始化
 checkLogin();
+</script>
+</body>
+</html>
